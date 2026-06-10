@@ -1,0 +1,7 @@
+# Hola Gemini
+
+=> /sub/other.gmi otros con carpeta
+
+=> gemini://localhost/sub/other.gmi otros pero absoluto con carpeta
+
+Servidor .NET funcionando.

@@ -1,26 +1,56 @@
-﻿namespace BOT_IRC_GEMINI;
+﻿using Microsoft.Extensions.Configuration;
+
+namespace BOT_IRC_GEMINI;
 
 class Program
 {
     public static Bot bot = null;
+    
+    private static Thread _GeminiServer;
 
+    private static IConfiguration _configuration;
+    
     private static string servidor = "irc.libera.chat";
     private static string nombreBot = "ClapTrakaLaKa";
     private static string nCanal = "#locos";
 
+    private static List<Bot> l_bots = null;
+    private static List<Thread> l_thread = new List<Thread>();
+    
     static void Main(string[] args)
     {
-        Console.WriteLine("Hello, World!");
+        // Console.WriteLine("Hello, World!");
+        
+        #region appsettings.json related
+        string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(environment))
+        {
+            environment = "." + environment;
+        }
+        #endregion
+        
+        _configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory()) // Requires Microsoft.Extensions.Configuration
+            .AddJsonFile("appsettings" + environment + ".json", optional: false, reloadOnChange: true) // Requires Microsoft.Extensions.Configuration.Json
+            .Build();
+        
+        _GeminiServer = new Thread(() => Gemini.StartGeminiServer());
+        _GeminiServer.Start();
+        l_bots = Config.Config_ObtenerBots(_configuration);
+
         MainAsync();
     }
 
     static void MainAsync()
     {
-        bot = CreateBot();
-
-        if (bot != null)
+        foreach (Bot bot in l_bots)
         {
-            bot.WorkingBot();
+            l_thread.Add(new Thread(() => bot.WorkingBot()));
+        }
+
+        foreach (Thread thread in l_thread)
+        {
+            thread.Start();
         }
     }
 

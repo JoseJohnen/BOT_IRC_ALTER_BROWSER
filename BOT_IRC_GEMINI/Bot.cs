@@ -7,47 +7,45 @@ namespace BOT_IRC_GEMINI;
 public class Bot
 {
     #region Attributes
+
     #region Instance Attributes
-    public string[] usuarios; // Creamos el string[] usuarios para tener todos los nicks que estan en el canal
 
-    NetworkStream conexion; // Establecemos la variable conexion como NetworkStream
-    TcpClient irc; // Establecemos la variable irc como TcpClient
-    string code = ""; // Creamos la variable string que vamos a usar para leer los sockets
-
-    public StreamReader leer_datos; // Establecemos la variable leer_datos como StreamReader
-    public StreamWriter mandar_datos; // Establecemos la variable mandar_datos como SteamWriter
-
-    string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
+    public string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
     public string nickname = "ClapTrakaLaKa"; // Establecemos la variable nickname con el nick del bot
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
+
+    private StreamReader leer_datos; // Establecemos la variable leer_datos como StreamReader
+    private StreamWriter mandar_datos; // Establecemos la variable mandar_datos como SteamWriter
+
+    private string[] usuarios; // Creamos el string[] usuarios para tener todos los nicks que estan en el canal
+    private NetworkStream conexion; // Establecemos la variable conexion como NetworkStream
+    private TcpClient irc; // Establecemos la variable irc como TcpClient
+    private string code = ""; // Creamos la variable string que vamos a usar para leer los sockets
     private string dedonde;
     private string usuarioCanal;
     private string mensaje;
+
     #endregion
 
     #region static attributes
-    public static Bot Instance = null;
 
     //Do not touch, this are the basic functions the bot performs, it filters out 
     //any normal comms from actual manual commands
-    private static Dictionary<string, Func<string, Match, string>> dicBotBasicFuncitions =
-        new Dictionary<string, Func<string, Match, string>>()
-        {
-            { "PING(.*)", Pong },
-            { ":(.*) 353 (.*) = (.*) :(.*)", ListaUsuarios },
-            { ":(.*)!(.*) PRIVMSG (.*) :(.*)", ProcesarMensajeRegular },
-        };
+    private Dictionary<string, Func<string, Match, string>> dicBotBasicFuncitions =
+        new Dictionary<string, Func<string, Match, string>>();
+        
 
     //Here you add the commands you want the bot to perform
-    private static Dictionary<string, Func<string, Match, string>> dicBotExtendedFunctions =
-        new Dictionary<string, Func<string, Match, string>>()
-        {
-            { "!(.*)d(.*)", DadosDeRol },
-        };
-    #endregion
+    private Dictionary<string, Func<string, Match, string>> dicBotExtendedFunctions =
+        new Dictionary<string, Func<string, Match, string>>();
+        
+
     #endregion
 
-    #region  Constructors
+    #endregion
+
+    #region Constructors
+
     public Bot(string host, string nickname, string canal)
     {
         irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
@@ -59,16 +57,48 @@ public class Bot
         this.nickname = nickname;
         this.canal = canal;
     }
+
+    public Bot()
+    {
+        this.host = host;
+        this.nickname = nickname;
+        this.canal = canal;
+    }
+
     #endregion
-    
-    #region  Functions required to establish comms and process the receiving input from IRC
+
+    #region Functions required to establish comms and process the receiving input from IRC
+
     public void PrepareBot()
     {
-        Instance = this;
+        irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
+        conexion = irc.GetStream(); // Cargamos la conexion para poder leer los datos
+        leer_datos = new StreamReader(conexion); // Lo necesario para leer los datos de la conexion 
+        mandar_datos = new StreamWriter(conexion); // Lo necesario para mandar comandos al canal IRC
+
+        //Do not touch, this are the basic functions the bot performs, it filters out 
+        //any normal comms from actual manual commands
+        dicBotBasicFuncitions = new Dictionary<string, Func<string, Match, string>>()
+        {
+            { "PING(.*)", Pong },
+            { ":(.*) 353 (.*) = (.*) :(.*)", ListaUsuarios },
+            { ":(.*)!(.*) PRIVMSG (.*) :(.*)", ProcesarMensajeRegular },
+        };
+
+        //Here you add the commands you want the bot to perform
+        dicBotExtendedFunctions = new Dictionary<string, Func<string, Match, string>>()
+        {
+            { "!(.*)d(.*)", DadosDeRol },
+        };
+    }
+
+    public void PrepareBotConection()
+    {
+        // Instance = this;
         this.mandar_datos.WriteLine("NICK " +
                                     this.nickname); // Usamos el comando NICK para entrar al canal usando el nick antes declarado
         this.mandar_datos.Flush(); // Actualizamos la conexion
-
+        
         this.mandar_datos.WriteLine("USER " + this.nickname +
                                     " 1 1 1 1"); // Usamos el comando USER para confirmar el nickname
         this.mandar_datos.Flush(); // ..
@@ -76,10 +106,11 @@ public class Bot
         this.mandar_datos.WriteLine("JOIN " + this.canal); // Usamos el comando JOIN para entrar al canal
         this.mandar_datos.Flush(); // ..
     }
-    
+
     public void WorkingBot()
     {
         this.PrepareBot();
+        this.PrepareBotConection();
         Match regex = null;
         string result = string.Empty;
         string resultExtended = string.Empty;
@@ -107,17 +138,22 @@ public class Bot
                                         resultExtended = valPair.Value(result, regex);
                                         if (resultExtended.Contains("|n|"))
                                         {
-                                            foreach (string strResult in resultExtended.Split("|n|", StringSplitOptions.RemoveEmptyEntries))
+                                            foreach (string strResult in resultExtended.Split("|n|",
+                                                         StringSplitOptions.RemoveEmptyEntries))
                                             {
                                                 this.mandar_datos.WriteLine(strResult);
                                             }
+
                                             this.mandar_datos.Flush();
                                             break;
                                         }
-                                        this.mandar_datos.WriteLine(resultExtended); // Mandamos el comando de la variable anterior
+
+                                        this.mandar_datos
+                                            .WriteLine(resultExtended); // Mandamos el comando de la variable anterior
                                         this.mandar_datos.Flush(); // ..
                                     }
                                 }
+
                                 break;
                             }
 
@@ -130,17 +166,18 @@ public class Bot
             } //END While Interior
         } //END While Eterno
     }
-    
-    static string Pong(string item, Match regex) //Para responder al Ping del servidor con Pong
+
+    string Pong(string item, Match regex) //Para responder al Ping del servidor con Pong
     {
-        return "PONG " + regex.Groups[1].Value; // Capturamos lo que esta despues del ping y le damos al pong con los datos
+        return
+            "PONG " + regex.Groups[1].Value; // Capturamos lo que esta despues del ping y le damos al pong con los datos
     }
 
-    static string ProcesarMensajeRegular(string item, Match regex)
+    string ProcesarMensajeRegular(string item, Match regex)
     {
-        Instance.dedonde = regex.Groups[3].Value; // Se detecta la procedencia del mensaje
-        Instance.usuarioCanal = regex.Groups[1].Value; // Quien manda el mensaje
-        Instance.mensaje = regex.Groups[4].Value; // El mensaje en sí
+        this.dedonde = regex.Groups[3].Value; // Se detecta la procedencia del mensaje
+        this.usuarioCanal = regex.Groups[1].Value; // Quien manda el mensaje
+        this.mensaje = regex.Groups[4].Value; // El mensaje en sí
 
         #region En otros servers se detecta así
 
@@ -149,15 +186,15 @@ public class Bot
 
         #endregion
 
-        if (Instance.dedonde ==
-            Instance.canal) // Si la procedencia del mensaje no es el canal en si activamos esta condicion , cabe aclarar que si es el canal
+        if (this.dedonde ==
+            this.canal) // Si la procedencia del mensaje no es el canal en si activamos esta condicion , cabe aclarar que si es el canal
             // el que nos mando el mensaje es un mensaje PUBLICO , caso contrario es PRIVADO
 
         {
-            Console.WriteLine("[+] " + Instance.dedonde + " dice : " +
-                              Instance.mensaje); // Mostramos el dueño del mensaje y el mensaje
+            Console.WriteLine("[+] " + this.dedonde + " dice : " +
+                              this.mensaje); // Mostramos el dueño del mensaje y el mensaje
             // Esta es la orden !spam con los (.*) detectamos los dos comandos que son <nick> <mensaje>
-            Match regex_ordenes = Regex.Match(Instance.mensaje, "!spam (.*) (.*)", RegexOptions.IgnoreCase);
+            Match regex_ordenes = Regex.Match(this.mensaje, "!spam (.*) (.*)", RegexOptions.IgnoreCase);
 
             if (regex_ordenes.Success)
             {
@@ -165,61 +202,64 @@ public class Bot
             }
         }
         //Si la procedencia es un privado
-        else if (Instance.dedonde == Instance.nickname)
+        else if (this.dedonde == this.nickname)
         {
             // Mostramos el dueño del mensaje y el mensaje
-            Console.WriteLine("[+] " + Instance.usuarioCanal + " Como privado a " + Instance.dedonde + " dice : " +
-                              Instance.mensaje);
+            Console.WriteLine("[+] " + this.usuarioCanal + " Como privado a " + this.dedonde + " dice : " +
+                              this.mensaje);
             // Esta es la orden !spam con los (.*) detectamos los dos comandos que son <nick> <mensaje> y los ignoramos
-            Match regex_ordenes = Regex.Match(Instance.mensaje, "!spam (.*) (.*)", RegexOptions.IgnoreCase);
+            Match regex_ordenes = Regex.Match(this.mensaje, "!spam (.*) (.*)", RegexOptions.IgnoreCase);
 
             if (regex_ordenes.Success)
             {
                 return "";
             }
-
         }
 
-        return "°°°" + Instance.mensaje;
+        return "°°°" + this.mensaje;
     }
+
     #endregion
-    
+
     #region Functions that manage other processes proper of IRC
-    static string ListaUsuarios(string item, Match regex)
+
+    string ListaUsuarios(string item, Match regex)
     {
         string usuarios_lista = regex.Groups[4].Value; // Tenemos la variable con todos los nicks
 
         // Para mayor comodidad usamos un split para separar todos los espacios vacios que estan entre
-        Instance.usuarios = usuarios_lista.Split(' ');
+        this.usuarios = usuarios_lista.Split(' ');
         // cada nick del canal para despues hacer una lista , que es la primera que declare en el codigo
         foreach (string usuario in
-                 Instance.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
+                 this.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
         {
             Console.WriteLine("[+] User : " + usuario); // Mostramos cada user
         }
 
         return usuarios_lista;
     }
+
     #endregion
 
-    #region  Functions than make the bot do something (This is where the extended functions should go)
-    static public string DadosDeRol(string item, Match regex_ordenes)
+    #region Functions than make the bot do something (This is where the extended functions should go)
+
+    public string DadosDeRol(string item, Match regex_ordenes)
     {
         int a = 0, b = 0, resultInt = 0, c = 0;
-        string donde = Instance.dedonde;
+        string donde = this.dedonde;
         string resultStr = string.Empty;
         if (int.TryParse(regex_ordenes.Groups[1].Value, out a) && int.TryParse(regex_ordenes.Groups[2].Value, out b))
         {
             if (a > 0 && b > 0)
             {
                 Random rand = new Random();
-                if (donde != Instance.canal)
+                if (donde != this.canal)
                 {
-                    donde = Instance.usuarioCanal;
+                    donde = this.usuarioCanal;
                 }
 
-                string quien = !string.IsNullOrWhiteSpace(Instance.usuarioCanal)
-                    ? " " + Instance.usuarioCanal + " "
+                string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal)
+                    ? " " + this.usuarioCanal + " "
                     : " ";
 
                 string strSingularPlural = string.Empty;
@@ -257,6 +297,6 @@ public class Bot
                    ":Debes insertar valores numericos validos y exactos para obtener un resultado! (Sintaxis de ejemplo: !1d4 = 1 dado de 4 caras)"; // Mandamos
         }
     }
+
     #endregion
-    
 }
