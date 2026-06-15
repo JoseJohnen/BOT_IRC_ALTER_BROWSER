@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Sockets; // Lo mismo que la anterior
 using System.Text.RegularExpressions; // No es vital pero me encantan el uso de las expresiones regulares
 
@@ -9,7 +10,6 @@ public class Bot
     #region Attributes
 
     #region Instance Attributes
-
     public string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
     public string nickname = "ClapTrakaLaKa"; // Establecemos la variable nickname con el nick del bot
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
@@ -25,27 +25,24 @@ public class Bot
     private string usuarioCanal;
     private string mensaje;
 
-    #endregion
-
-    #region static attributes
-
-    //Do not touch, this are the basic functions the bot performs, it filters out 
+    //Do not touch, this are the basic functions the bot performs, it filters out
     //any normal comms from actual manual commands
+    //Here are the Hiperlinks available to every user
+    private ConcurrentDictionary<string, List<string>> cDicListaUsuarios_HiperVinculosGemini =
+        new ConcurrentDictionary<string, List<string>>();
+
+    //Here are the basic bot functions 
     private Dictionary<string, Func<string, Match, string>> dicBotBasicFuncitions =
         new Dictionary<string, Func<string, Match, string>>();
-        
 
     //Here you add the commands you want the bot to perform
     private Dictionary<string, Func<string, Match, string>> dicBotExtendedFunctions =
         new Dictionary<string, Func<string, Match, string>>();
-        
-
     #endregion
 
     #endregion
 
     #region Constructors
-
     public Bot(string host, string nickname, string canal)
     {
         irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
@@ -64,11 +61,9 @@ public class Bot
         this.nickname = nickname;
         this.canal = canal;
     }
-
     #endregion
 
     #region Functions required to establish comms and process the receiving input from IRC
-
     public void PrepareBot()
     {
         irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
@@ -81,7 +76,9 @@ public class Bot
         dicBotBasicFuncitions = new Dictionary<string, Func<string, Match, string>>()
         {
             { "PING(.*)", Pong },
-            { ":(.*) 353 (.*) = (.*) :(.*)", ListaUsuarios },
+            { ":(.*) 353 (.*) @ (.*) :(.*)", ListaUsuarios },
+            { ":(.*)!(.*) JOIN (.*)", ProcesarUnionConexionCanal },
+            { ":(.*)!(.*) PART (.*)", ProcesarAbandonarConexionCanal },
             { ":(.*)!(.*) PRIVMSG (.*) :(.*)", ProcesarMensajeRegular },
         };
 
@@ -89,16 +86,16 @@ public class Bot
         dicBotExtendedFunctions = new Dictionary<string, Func<string, Match, string>>()
         {
             { "!(.*)d(.*)", DadosDeRol },
+            { "GEMINI>>(.*)", ReadGeminiFile },
         };
     }
-
     public void PrepareBotConection()
     {
         // Instance = this;
         this.mandar_datos.WriteLine("NICK " +
                                     this.nickname); // Usamos el comando NICK para entrar al canal usando el nick antes declarado
         this.mandar_datos.Flush(); // Actualizamos la conexion
-        
+
         this.mandar_datos.WriteLine("USER " + this.nickname +
                                     " 1 1 1 1"); // Usamos el comando USER para confirmar el nickname
         this.mandar_datos.Flush(); // ..
@@ -166,6 +163,28 @@ public class Bot
             } //END While Interior
         } //END While Eterno
     }
+    
+    private string ProcesarUnionConexionCanal(string lineaCompleta, Match match)
+    {
+        string usuario = match.Groups[1].Value;
+        string canal = match.Groups[4].Value.Trim();
+
+        cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario, new List<string>());
+        
+        Console.WriteLine($"{usuario} ha entrado al canal {canal}");
+        return $"PRIVMSG {canal} :Bienvenido {usuario}!";
+    }
+    
+    private string ProcesarAbandonarConexionCanal(string lineaCompleta, Match match)
+    {
+        string usuario = match.Groups[1].Value;
+        string canal = match.Groups[4].Value.Trim();
+
+        cDicListaUsuarios_HiperVinculosGemini.TryRemove(usuario, out _);
+        
+        Console.WriteLine($"{usuario} ha salido del canal {canal} Chao Chao!");
+        return $"PRIVMSG {canal} :Bye Bye {usuario}!";
+    }
 
     string Pong(string item, Match regex) //Para responder al Ping del servidor con Pong
     {
@@ -222,33 +241,65 @@ public class Bot
     #endregion
 
     #region Functions that manage other processes proper of IRC
-
     string ListaUsuarios(string item, Match regex)
     {
-        string usuarios_lista = regex.Groups[4].Value; // Tenemos la variable con todos los nicks
-
-        // Para mayor comodidad usamos un split para separar todos los espacios vacios que estan entre
-        this.usuarios = usuarios_lista.Split(' ');
-        // cada nick del canal para despues hacer una lista , que es la primera que declare en el codigo
-        foreach (string usuario in
-                 this.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
+        try
         {
-            Console.WriteLine("[+] User : " + usuario); // Mostramos cada user
-        }
+            string usuarios_lista = regex.Groups[4].Value; // Tenemos la variable con todos los nicks
 
-        return usuarios_lista;
+            // Para mayor comodidad usamos un split para separar todos los espacios vacios que estan entre
+            this.usuarios = usuarios_lista.Split(' ');
+            // cada nick del canal para despues hacer una lista , que es la primera que declare en el codigo
+            foreach (string usuario in
+                     this.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
+            {
+                cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario.TrimStart('~', '&', '@', '%', '+'), new List<string>());
+                Console.WriteLine("[+] User : " + usuario); // Mostramos cada user
+            }
+
+            return usuarios_lista;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
+    string ObtenerListaUsuarios(string item, Match regex)
+    {
+        try
+        {
+            string canal = regex.Groups[4].Value.Trim();
+
+            return $"NAMES {canal}";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return String.Empty;
+        }
+    }
     #endregion
 
     #region Functions than make the bot do something (This is where the extended functions should go)
 
-    public string DadosDeRol(string item, Match regex_ordenes)
+    public string DadosDeRol(string item, Match regex)
     {
+        string[] numerosRelevnateDado = item.Split(" ", StringSplitOptions.RemoveEmptyEntries)[0]
+            .Split("d", StringSplitOptions.RemoveEmptyEntries);
+
+        if (!int.TryParse(numerosRelevnateDado[0].TrimStart("!"), out _) ||
+            !int.TryParse(numerosRelevnateDado[1], out _))
+        {
+            //Significa que no era un uso de tirada de dado, es una falsa detección
+            return string.Empty;
+        }
+
         int a = 0, b = 0, resultInt = 0, c = 0;
         string donde = this.dedonde;
         string resultStr = string.Empty;
-        if (int.TryParse(regex_ordenes.Groups[1].Value, out a) && int.TryParse(regex_ordenes.Groups[2].Value, out b))
+        if (int.TryParse(regex.Groups[1].Value, out a) && int.TryParse(regex.Groups[2].Value, out b))
         {
             if (a > 0 && b > 0)
             {
@@ -295,6 +346,72 @@ public class Bot
         {
             return "PRIVMSG" + " " + donde + " " +
                    ":Debes insertar valores numericos validos y exactos para obtener un resultado! (Sintaxis de ejemplo: !1d4 = 1 dado de 4 caras)"; // Mandamos
+        }
+    }
+
+    public string ReadGeminiFile(string item, Match regex)
+    {
+        string donde = this.dedonde;
+
+        if (donde != this.canal)
+        {
+            donde = this.usuarioCanal;
+        }
+
+        string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
+
+        string root = Path.GetFullPath(Gemini._pth);
+        string filePath = Path.Combine(root, "index.gmi");
+
+        if (!cDicListaUsuarios_HiperVinculosGemini.Keys.Contains(quien))
+        {
+            ObtenerListaUsuarios(item, regex);
+        }
+
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                string result = string.Empty;
+                string commands = "Commands available: [H]ome : [#] to use link :";
+                int i = 0;
+                //TODO: Los dos Console.WriteLine contenidos deben ser reemplazados por mensajes retornados a IRC
+                foreach (KeyValuePair<string, List<string>> kvp in cDicListaUsuarios_HiperVinculosGemini)
+                {
+                    if (kvp.Key == this.usuarioCanal)
+                    {
+                        foreach (string line in File.ReadLines(filePath))
+                        {
+                            if (line.Contains("=>"))
+                            {
+                                kvp.Value.Add(line);
+                                i++;
+                                Console.WriteLine("[" + i + "] " + line);
+                                result += "PRIVMSG " + donde + " : [" + i + "] " + line + "|n|";
+                                continue;
+                            }
+
+                            Console.WriteLine(line);
+                            result += "PRIVMSG " + donde + " : " + line + "|n|";
+                        }
+
+                        Console.WriteLine(commands);
+                        result += commands;
+                    }
+                }
+
+                return result;
+            }
+            else
+            {
+                Console.WriteLine("Error: The 'sample.txt' file was not found in the execution directory.");
+                return string.Empty;
+            }
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"An I/O error occurred: {ex.Message}");
+            return string.Empty;
         }
     }
 

@@ -8,32 +8,34 @@ namespace BOT_IRC_GEMINI;
 
 public class Gemini
 {
-    private static string pth = "root";
-    private static string prt = "1965";
-    private static string cert1 = "cert.pem";
-    private static string cert2 = "key.pem";
+    public static string _pth = "root";
+    private static string _prt = "1965";
+    private static string _cert1 = "cert.pem";
+    private static string _cert2 = "key.pem";
 
+    public static string IRCURI = string.Empty;
+        
     public static async void StartGeminiServer(string[] args = null)
     {
         if (args != null)
         {
             if (args.Length >= 4)
             {
-                pth = args[0];
-                prt = args[1];
-                cert1 = args[2];
-                cert2 = args[3];
+                _pth = args[0];
+                _prt = args[1];
+                _cert1 = args[2];
+                _cert2 = args[3];
             }
         }
 
         Console.WriteLine("Usage: rootdir port cert.pem key.pem");
 
-        string root = Path.GetFullPath(pth);
-        int port = int.Parse(prt);
+        string root = Path.GetFullPath(_pth);
+        int port = int.Parse(_prt);
 
-        var cert = X509Certificate2.CreateFromPemFile(cert1, cert2);
+        X509Certificate2 cert = X509Certificate2.CreateFromPemFile(_cert1, _cert2);
 
-        var listener = new TcpListener(IPAddress.Any, port);
+        TcpListener listener = new TcpListener(IPAddress.Any, port);
 
         listener.Start();
 
@@ -41,11 +43,11 @@ public class Gemini
 
         while (true)
         {
-            var client = await listener.AcceptTcpClientAsync();
+            TcpClient client = await listener.AcceptTcpClientAsync();
 
             _ = Task.Run(async () =>
             {
-                using var tcp = client;
+                using TcpClient tcp = client;
 
                 try
                 {

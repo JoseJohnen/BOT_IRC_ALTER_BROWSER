@@ -19,7 +19,16 @@ class Program
     
     static void Main(string[] args)
     {
-        // Console.WriteLine("Hello, World!");
+        //TODO: 
+        // - Hacer que se lea el archivo GEMINI en cuestión
+        // - Hacer que se muestre por IRC
+        // - Hacer que se pueda navegar entre los puntos con IRC
+        // - implementar encendido y apagado de servidor GEMINI a través de IRC
+        // - Implementar demas ejemplos visuales GEMINI
+        // - Implementar parámetros de bot para recibir mensajes (FCR)
+        // Hacer que el bot también sirva como bot puente (IRC y otro servicio TLS/SSL)
+        // Ver como disponer de enviar y recibir archivos usando DCC (por el lado de bot IRC)
+        // Ver como implementar la recepción de query y los certificados por el lado de GEMINI
         
         #region appsettings.json related
         string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
