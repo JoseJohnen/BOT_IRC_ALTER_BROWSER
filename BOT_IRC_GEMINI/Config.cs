@@ -11,6 +11,7 @@ public static class Config
         Bot nBot = null;
         List<Bot> l_bots = new List<Bot>();
         int index = 0;
+        Bot._thrSendDataIrc.Start();
         while (true)
         {
             string nickname = configurationRoot[$"Bots:{index}:nickname"];

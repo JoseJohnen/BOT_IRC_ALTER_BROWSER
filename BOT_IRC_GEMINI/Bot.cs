@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
-using System.Net.Sockets; // Lo mismo que la anterior
-using System.Text.RegularExpressions; // No es vital pero me encantan el uso de las expresiones regulares
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Text; // Lo mismo que la anterior
+using System.Text.RegularExpressions;
+using System.Threading.Channels; // No es vital pero me encantan el uso de las expresiones regulares
 
 
 namespace BOT_IRC_GEMINI;
@@ -10,10 +13,14 @@ public class Bot
     #region Attributes
 
     #region Instance Attributes
+
     public string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
     public string nickname = "ClapTrakaLaKa"; // Establecemos la variable nickname con el nick del bot
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
 
+    #endregion
+    
+    #region Functional Attributes
     private StreamReader leer_datos; // Establecemos la variable leer_datos como StreamReader
     private StreamWriter mandar_datos; // Establecemos la variable mandar_datos como SteamWriter
 
@@ -25,6 +32,7 @@ public class Bot
     private string usuarioCanal;
     private string mensaje;
 
+    private List<Thread> thrGeminiExplorations = new List<Thread>();
     //Do not touch, this are the basic functions the bot performs, it filters out
     //any normal comms from actual manual commands
     //Here are the Hiperlinks available to every user
@@ -38,11 +46,94 @@ public class Bot
     //Here you add the commands you want the bot to perform
     private Dictionary<string, Func<string, Match, string>> dicBotExtendedFunctions =
         new Dictionary<string, Func<string, Match, string>>();
+
+    #region  Class (static) attributes
+
+    private static CancellationToken _cancelToken = new CancellationToken();
+    internal static Thread _thrSendDataIrc = new Thread(() => SendingDataIrc(_cancelToken));
+
     #endregion
+
+    #endregion
+
+    #endregion
+
+    #region Shock absorbers
+    //IT does create "Back Pressure"
+    //It will wait for space to be available in order to wait
+    private static BoundedChannelOptions options = new BoundedChannelOptions(255);
+
+    private static Channel<Trio<Bot, string,string>> channelReceive = null;
+
+    public static Channel<Trio<Bot, string,string>> ChannelReceive
+    {
+        get
+        {
+            if (channelReceive == null)
+            {
+                options.FullMode = BoundedChannelFullMode.Wait;
+                channelReceive = System.Threading.Channels.Channel.CreateBounded<Trio<Bot, string,string>>(options);
+            }
+
+            return channelReceive;
+        }
+        set { channelReceive = value; }
+    }
+    
+    private static ChannelWriter<Trio<Bot, string,string>> writerSender = null;
+
+    public static ChannelWriter<Trio<Bot, string,string>> WriterSender
+    {
+        get
+        {
+            if (writerSender == null)
+            {
+                writerSender = ChannelReceive.Writer;
+            }
+
+            return writerSender;
+        }
+        set => writerSender = value;
+    }
+
+    private static ChannelReader<Trio<Bot, string,string>> writerReceiver = null;
+
+    public static ChannelReader<Trio<Bot, string,string>> WriterReceiver
+    {
+        get
+        {
+            if (writerReceiver == null)
+            {
+                writerReceiver = ChannelReceive.Reader;
+            }
+
+            return writerReceiver;
+        }
+        set => writerReceiver = value;
+    }
+    
+    public static async void SendingDataIrc(CancellationToken cancellationToken)
+    {
+        try
+        {
+            Trio<Bot, string, string> tmpPar = null;
+            while (await WriterReceiver.WaitToReadAsync())
+            {
+                tmpPar = await WriterReceiver.ReadAsync();
+                tmpPar.Item1.mandar_datos.WriteLine("PRIVMSG " + tmpPar.Item2 + " : " + tmpPar.Item3);
+                tmpPar.Item1.mandar_datos.Flush();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Out.WriteLine($"Error ReadingChannelReceive: {ex.Message}");
+        }
+    }
 
     #endregion
 
     #region Constructors
+
     public Bot(string host, string nickname, string canal)
     {
         irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
@@ -61,9 +152,11 @@ public class Bot
         this.nickname = nickname;
         this.canal = canal;
     }
+
     #endregion
 
     #region Functions required to establish comms and process the receiving input from IRC
+
     public void PrepareBot()
     {
         irc = new TcpClient(host, 6667); // Realizamos la conexion con el canal usando el host y el puerto 6667
@@ -87,8 +180,11 @@ public class Bot
         {
             { "!(.*)d(.*)", DadosDeRol },
             { "GEMINI>>(.*)", ReadGeminiFile },
+            { "GEMINI>(.*)", FetchGeminiSite },
+            { "GOPHER>(.*)", FetchGopherSite },
         };
     }
+
     public void PrepareBotConection()
     {
         // Instance = this;
@@ -163,25 +259,25 @@ public class Bot
             } //END While Interior
         } //END While Eterno
     }
-    
+
     private string ProcesarUnionConexionCanal(string lineaCompleta, Match match)
     {
         string usuario = match.Groups[1].Value;
         string canal = match.Groups[4].Value.Trim();
 
         cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario, new List<string>());
-        
+
         Console.WriteLine($"{usuario} ha entrado al canal {canal}");
         return $"PRIVMSG {canal} :Bienvenido {usuario}!";
     }
-    
+
     private string ProcesarAbandonarConexionCanal(string lineaCompleta, Match match)
     {
         string usuario = match.Groups[1].Value;
         string canal = match.Groups[4].Value.Trim();
 
         cDicListaUsuarios_HiperVinculosGemini.TryRemove(usuario, out _);
-        
+
         Console.WriteLine($"{usuario} ha salido del canal {canal} Chao Chao!");
         return $"PRIVMSG {canal} :Bye Bye {usuario}!";
     }
@@ -241,6 +337,7 @@ public class Bot
     #endregion
 
     #region Functions that manage other processes proper of IRC
+
     string ListaUsuarios(string item, Match regex)
     {
         try
@@ -253,7 +350,8 @@ public class Bot
             foreach (string usuario in
                      this.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
             {
-                cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario.TrimStart('~', '&', '@', '%', '+'), new List<string>());
+                cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario.TrimStart('~', '&', '@', '%', '+'),
+                    new List<string>());
                 Console.WriteLine("[+] User : " + usuario); // Mostramos cada user
             }
 
@@ -280,6 +378,7 @@ public class Bot
             return String.Empty;
         }
     }
+
     #endregion
 
     #region Functions than make the bot do something (This is where the extended functions should go)
@@ -373,7 +472,7 @@ public class Bot
             if (File.Exists(filePath))
             {
                 string result = string.Empty;
-                string commands = "Commands available: [H]ome : [#] to use link :";
+                string commands = "PRIVMSG " + donde + " : Commands available: [H]ome : [#] to use link :";
                 int i = 0;
                 //TODO: Los dos Console.WriteLine contenidos deben ser reemplazados por mensajes retornados a IRC
                 foreach (KeyValuePair<string, List<string>> kvp in cDicListaUsuarios_HiperVinculosGemini)
@@ -415,5 +514,169 @@ public class Bot
         }
     }
 
+    public string FetchGeminiSite(string item, Match regex)
+    {
+        try
+        {
+            Thread thrd = new Thread(() => FetchGeminiGem(item, regex));
+            thrGeminiExplorations.Add(thrd);
+            thrd.Start();
+            return "1";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return "0";
+        }
+    }
+    
+    public string FetchGopherSite(string item, Match regex)
+    {
+        try
+        {
+            Thread thrd = new Thread(() => FetchGopherHole(item, regex));
+            thrGeminiExplorations.Add(thrd);
+            thrd.Start();
+            return "1";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return "0";
+        }
+    }
+    
+    public async Task<string> FetchGeminiGem(string item, Match regex)
+    {
+        try
+        {
+            string donde = this.dedonde;
+
+            if (donde != this.canal)
+            {
+                donde = this.usuarioCanal;
+            }
+          
+            DateTime lastExecution = DateTime.Now;
+            TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
+            string abb = FetchGeminiSiteAsync(item, regex).GetAwaiter().GetResult();
+            string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
+            int i = 0;
+            string result = string.Empty;
+            do
+            {
+                if (interval <= (DateTime.Now - lastExecution))
+                {
+                    lastExecution = DateTime.Now;
+                    WriterSender.TryWrite(new Trio<Bot, string,string>(this, donde, strArray[i]));
+                    i++;
+                }
+            } while (strArray.Length > i);
+
+            return result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return string.Empty;
+        }
+    }
+    
+    public async Task<string> FetchGopherHole(string item, Match regex)
+    {
+        try
+        {
+            string donde = this.dedonde;
+
+            if (donde != this.canal)
+            {
+                donde = this.usuarioCanal;
+            }
+          
+            DateTime lastExecution = DateTime.Now;
+            TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
+            string abb = FetchGopherSiteAsync(item, regex).GetAwaiter().GetResult();
+            string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
+            int i = 0;
+            string result = string.Empty;
+            do
+            {
+                if (interval <= (DateTime.Now - lastExecution))
+                {
+                    lastExecution = DateTime.Now;
+                    WriterSender.TryWrite(new Trio<Bot, string,string>(this, donde, strArray[i]));
+                    i++;
+                }
+            } while (strArray.Length > i);
+
+            return result;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return string.Empty;
+        }
+    }
+
+    public static async Task<string> FetchGeminiSiteAsync(string urlString, Match regex)
+    {
+        Uri uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
+        if (!uri.Scheme.Equals("gemini", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("URL must use the gemini:// scheme.");
+        
+        // Gemini protocol defaults to port 1965
+        int port = uri.Port == -1 ? 1965 : uri.Port;
+
+        using TcpClient client = new TcpClient();
+        await client.ConnectAsync(uri.Host, port);
+
+        // Establish the TLS stream
+        using var sslStream = new SslStream(client.GetStream(), false,
+            (sender, certificate, chain, sslPolicyErrors) => true); // Trust TOFU/Self-signed certs typical of Gemini
+
+        await sslStream.AuthenticateAsClientAsync(uri.Host);
+
+        // Gemini requests are structured exactly as: <URL><CR><LF>
+        byte[] requestBytes = Encoding.UTF8.GetBytes($"{uri}\r\n");
+        await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length);
+        await sslStream.FlushAsync();
+
+        // Read the server response
+        using var reader = new StreamReader(sslStream, Encoding.UTF8);
+        return await reader.ReadToEndAsync();
+    }
+
+    public static async Task<string> FetchGopherSiteAsync(string urlString, Match regex)
+    {
+        // Validar y parsear la URL de Gopher
+        if (!Uri.TryCreate(urlString.Split(">", StringSplitOptions.TrimEntries)[1], UriKind.Absolute, out Uri? uri) || 
+            !uri.Scheme.Equals("gopher", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("La URL debe ser absoluta y usar el esquema gopher://");
+        }
+
+        // El protocolo Gopher usa el puerto 70 por defecto
+        int port = uri.Port == -1 ? 70 : uri.Port;
+
+        using var client = new TcpClient();
+        await client.ConnectAsync(uri.Host, port);
+
+        // Gopher es texto plano directo sobre el stream de red (Sin TLS/SSL)
+        using var networkStream = client.GetStream();
+
+        // Extraer el selector (Gopher requiere el path limpio sin el caracter de tipo inicial)
+        // uri.AbsolutePath usualmente incluye un "/" inicial. Si está vacío o es solo "/", se envía cadena vacía.
+        string selector = uri.AbsolutePath;
+        string filtrado = selector.Replace("1","").Replace("//","");
+
+        // Las solicitudes Gopher se estructuran exactamente como: <Selector><CR><LF>
+        byte[] requestBytes = Encoding.UTF8.GetBytes(filtrado.TrimStart('/').TrimEnd('/') + "\r\n");
+        await networkStream.WriteAsync(requestBytes);
+        await networkStream.FlushAsync();
+
+        // Leer la respuesta completa del servidor
+        using var reader = new StreamReader(networkStream, Encoding.UTF8);
+        return await reader.ReadToEndAsync();
+    }
     #endregion
 }
