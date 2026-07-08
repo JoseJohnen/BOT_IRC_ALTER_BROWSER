@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -19,8 +20,9 @@ public class Bot
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
 
     #endregion
-    
+
     #region Functional Attributes
+
     private StreamReader leer_datos; // Establecemos la variable leer_datos como StreamReader
     private StreamWriter mandar_datos; // Establecemos la variable mandar_datos como SteamWriter
 
@@ -33,11 +35,23 @@ public class Bot
     private string mensaje;
 
     private List<Thread> thrGeminiExplorations = new List<Thread>();
+
+    //This saves the user navigational history
+    //quien, QueueUrls
+    private ConcurrentDictionary<string, ConcurrentQueue<string>> cDicUsuarios_Historial =
+        new ConcurrentDictionary<string, ConcurrentQueue<string>>();
+    
+    //This defines where is quien, so to know which list of links use with the user;
+    //quien, activeUrl, FechaUltimaAcción
+    private ConcurrentDictionary<string, Par<string, DateTime>> cDicListaUsuarios_HiperLinkActivo =
+        new ConcurrentDictionary<string, Par<string, DateTime>>();
+
     //Do not touch, this are the basic functions the bot performs, it filters out
     //any normal comms from actual manual commands
     //Here are the Hiperlinks available to every user
-    private ConcurrentDictionary<string, List<string>> cDicListaUsuarios_HiperVinculosGemini =
-        new ConcurrentDictionary<string, List<string>>();
+    //Site, HiperLinks, DateOfCreation (to know when to properly ditch them)
+    private ConcurrentDictionary<string, List<Trio<string, List<string>, DateTime>>> cDicListaUsuarios_HiperVinculos =
+        new ConcurrentDictionary<string, List<Trio<string, List<string>, DateTime>>>();
 
     //Here are the basic bot functions 
     private Dictionary<string, Func<string, Match, string>> dicBotBasicFuncitions =
@@ -47,7 +61,7 @@ public class Bot
     private Dictionary<string, Func<string, Match, string>> dicBotExtendedFunctions =
         new Dictionary<string, Func<string, Match, string>>();
 
-    #region  Class (static) attributes
+    #region Class (static) attributes
 
     private static CancellationToken _cancelToken = new CancellationToken();
     internal static Thread _thrSendDataIrc = new Thread(() => SendingDataIrc(_cancelToken));
@@ -59,30 +73,31 @@ public class Bot
     #endregion
 
     #region Shock absorbers
+
     //IT does create "Back Pressure"
     //It will wait for space to be available in order to wait
     private static BoundedChannelOptions options = new BoundedChannelOptions(255);
 
-    private static Channel<Trio<Bot, string,string>> channelReceive = null;
+    private static Channel<Trio<Bot, string, string>> channelReceive = null;
 
-    public static Channel<Trio<Bot, string,string>> ChannelReceive
+    public static Channel<Trio<Bot, string, string>> ChannelReceive
     {
         get
         {
             if (channelReceive == null)
             {
                 options.FullMode = BoundedChannelFullMode.Wait;
-                channelReceive = System.Threading.Channels.Channel.CreateBounded<Trio<Bot, string,string>>(options);
+                channelReceive = System.Threading.Channels.Channel.CreateBounded<Trio<Bot, string, string>>(options);
             }
 
             return channelReceive;
         }
         set { channelReceive = value; }
     }
-    
-    private static ChannelWriter<Trio<Bot, string,string>> writerSender = null;
 
-    public static ChannelWriter<Trio<Bot, string,string>> WriterSender
+    private static ChannelWriter<Trio<Bot, string, string>> writerSender = null;
+
+    public static ChannelWriter<Trio<Bot, string, string>> WriterSender
     {
         get
         {
@@ -96,9 +111,9 @@ public class Bot
         set => writerSender = value;
     }
 
-    private static ChannelReader<Trio<Bot, string,string>> writerReceiver = null;
+    private static ChannelReader<Trio<Bot, string, string>> writerReceiver = null;
 
-    public static ChannelReader<Trio<Bot, string,string>> WriterReceiver
+    public static ChannelReader<Trio<Bot, string, string>> WriterReceiver
     {
         get
         {
@@ -111,7 +126,7 @@ public class Bot
         }
         set => writerReceiver = value;
     }
-    
+
     public static async void SendingDataIrc(CancellationToken cancellationToken)
     {
         try
@@ -179,7 +194,8 @@ public class Bot
         dicBotExtendedFunctions = new Dictionary<string, Func<string, Match, string>>()
         {
             { "!(.*)d(.*)", DadosDeRol },
-            { "GEMINI>>(.*)", ReadGeminiFile },
+            // { "GEMINI:(.*)", FollowLinkGeminiSite },
+            { @"\[(.*)\]", FollowLinkSite },
             { "GEMINI>(.*)", FetchGeminiSite },
             { "GOPHER>(.*)", FetchGopherSite },
         };
@@ -265,7 +281,7 @@ public class Bot
         string usuario = match.Groups[1].Value;
         string canal = match.Groups[4].Value.Trim();
 
-        cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario, new List<string>());
+        cDicListaUsuarios_HiperVinculos.TryAdd(usuario, new List<Trio<string, List<string>, DateTime>>());
 
         Console.WriteLine($"{usuario} ha entrado al canal {canal}");
         return $"PRIVMSG {canal} :Bienvenido {usuario}!";
@@ -276,7 +292,7 @@ public class Bot
         string usuario = match.Groups[1].Value;
         string canal = match.Groups[4].Value.Trim();
 
-        cDicListaUsuarios_HiperVinculosGemini.TryRemove(usuario, out _);
+        cDicListaUsuarios_HiperVinculos.TryRemove(usuario, out _);
 
         Console.WriteLine($"{usuario} ha salido del canal {canal} Chao Chao!");
         return $"PRIVMSG {canal} :Bye Bye {usuario}!";
@@ -334,6 +350,83 @@ public class Bot
         return "°°°" + this.mensaje;
     }
 
+    bool Cleaner()
+    {
+        try
+        {
+            ThreadCleaner();
+            UserHyperLinkCleaner();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Cleaner: " + e.Message);
+            return false;
+        }
+    }
+
+    bool ThreadCleaner()
+    {
+        try
+        {
+            if (thrGeminiExplorations != null)
+            {
+                thrGeminiExplorations.RemoveAll(thr => !thr.IsAlive);
+                return true;
+            }
+
+            thrGeminiExplorations = new();
+            return false;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("ThreadCleaner: " + e.Message);
+            return false;
+        }
+    }
+
+    bool UserHyperLinkCleaner()
+    {
+        try
+        {
+            List<string> l_keysToRemove = new List<string>();
+            TimeSpan tSpan = new TimeSpan(3, 0, 0);
+
+            if (cDicListaUsuarios_HiperLinkActivo != null)
+            {
+                foreach (KeyValuePair<string, Par<string, DateTime>> kvp in cDicListaUsuarios_HiperLinkActivo)
+                {
+                    if (DateTime.Now - kvp.Value.Item2 > tSpan)
+                    {
+                        l_keysToRemove.Add(kvp.Key);
+                    }
+                }
+            }
+
+            foreach (string strKeyToRemove in l_keysToRemove)
+            {
+                cDicListaUsuarios_HiperLinkActivo.TryRemove(strKeyToRemove, out _);
+                cDicUsuarios_Historial.TryRemove(strKeyToRemove, out _);
+            }
+
+            if (cDicListaUsuarios_HiperVinculos != null)
+            {
+                foreach (KeyValuePair<string, List<Trio<string, List<string>, DateTime>>> vr in
+                         cDicListaUsuarios_HiperVinculos)
+                {
+                    vr.Value.RemoveAll(c => (DateTime.Now - c.Item3) > tSpan);
+                }
+            }
+            
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("UserHyperLinkCleaner: " + e.Message);
+            return false;
+        }
+    }
+
     #endregion
 
     #region Functions that manage other processes proper of IRC
@@ -350,8 +443,8 @@ public class Bot
             foreach (string usuario in
                      this.usuarios) // Usamos un for each para leer la lista usuarios y mostrar cada nick en la variable usuario
             {
-                cDicListaUsuarios_HiperVinculosGemini.TryAdd(usuario.TrimStart('~', '&', '@', '%', '+'),
-                    new List<string>());
+                cDicListaUsuarios_HiperVinculos.TryAdd(usuario.TrimStart('~', '&', '@', '%', '+'),
+                    new List<Trio<string, List<string>, DateTime>>());
                 Console.WriteLine("[+] User : " + usuario); // Mostramos cada user
             }
 
@@ -382,7 +475,20 @@ public class Bot
     #endregion
 
     #region Functions than make the bot do something (This is where the extended functions should go)
+    public string Back(string item, Match regex)
+    {
+        try
+        {
 
+            return string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Back: "+e.Message);
+            return string.Empty;
+        }    
+    }
+    
     public string DadosDeRol(string item, Match regex)
     {
         string[] numerosRelevnateDado = item.Split(" ", StringSplitOptions.RemoveEmptyEntries)[0]
@@ -448,77 +554,12 @@ public class Bot
         }
     }
 
-    public string ReadGeminiFile(string item, Match regex)
-    {
-        string donde = this.dedonde;
-
-        if (donde != this.canal)
-        {
-            donde = this.usuarioCanal;
-        }
-
-        string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
-
-        string root = Path.GetFullPath(Gemini._pth);
-        string filePath = Path.Combine(root, "index.gmi");
-
-        if (!cDicListaUsuarios_HiperVinculosGemini.Keys.Contains(quien))
-        {
-            ObtenerListaUsuarios(item, regex);
-        }
-
-        try
-        {
-            if (File.Exists(filePath))
-            {
-                string result = string.Empty;
-                string commands = "PRIVMSG " + donde + " : Commands available: [H]ome : [#] to use link :";
-                int i = 0;
-                //TODO: Los dos Console.WriteLine contenidos deben ser reemplazados por mensajes retornados a IRC
-                foreach (KeyValuePair<string, List<string>> kvp in cDicListaUsuarios_HiperVinculosGemini)
-                {
-                    if (kvp.Key == this.usuarioCanal)
-                    {
-                        foreach (string line in File.ReadLines(filePath))
-                        {
-                            if (line.Contains("=>"))
-                            {
-                                kvp.Value.Add(line);
-                                i++;
-                                Console.WriteLine("[" + i + "] " + line);
-                                result += "PRIVMSG " + donde + " : [" + i + "] " + line + "|n|";
-                                continue;
-                            }
-
-                            Console.WriteLine(line);
-                            result += "PRIVMSG " + donde + " : " + line + "|n|";
-                        }
-
-                        Console.WriteLine(commands);
-                        result += commands;
-                    }
-                }
-
-                return result;
-            }
-            else
-            {
-                Console.WriteLine("Error: The 'sample.txt' file was not found in the execution directory.");
-                return string.Empty;
-            }
-        }
-        catch (IOException ex)
-        {
-            Console.WriteLine($"An I/O error occurred: {ex.Message}");
-            return string.Empty;
-        }
-    }
-
     public string FetchGeminiSite(string item, Match regex)
     {
         try
         {
             Thread thrd = new Thread(() => FetchGeminiGem(item, regex));
+            Cleaner();
             thrGeminiExplorations.Add(thrd);
             thrd.Start();
             return "1";
@@ -529,12 +570,13 @@ public class Bot
             return "0";
         }
     }
-    
+
     public string FetchGopherSite(string item, Match regex)
     {
         try
         {
             Thread thrd = new Thread(() => FetchGopherHole(item, regex));
+            Cleaner();
             thrGeminiExplorations.Add(thrd);
             thrd.Start();
             return "1";
@@ -545,7 +587,7 @@ public class Bot
             return "0";
         }
     }
-    
+
     public async Task<string> FetchGeminiGem(string item, Match regex)
     {
         try
@@ -556,32 +598,89 @@ public class Bot
             {
                 donde = this.usuarioCanal;
             }
-          
+
+            string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
+
             DateTime lastExecution = DateTime.Now;
             TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
             string abb = FetchGeminiSiteAsync(item, regex).GetAwaiter().GetResult();
-            string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
-            int i = 0;
+            string[] strArray = abb.Split("\n");
+            int i = 0, j = 0;
             string result = string.Empty;
+            string baseUrl = item;
+            if (baseUrl.Contains(">"))
+            {
+                baseUrl = item.Split(">", StringSplitOptions.TrimEntries)[1];
+            }
+
+            cDicListaUsuarios_HiperLinkActivo.AddOrUpdate(quien, new Par<string, DateTime>(baseUrl, DateTime.Now),
+                (key, value) => new Par<string, DateTime>(baseUrl, DateTime.Now));
+            
+            cDicUsuarios_Historial.AddOrUpdate(
+                quien, 
+                new ConcurrentQueue<string>(new[] { baseUrl }), 
+                (key, existingQueue) => {
+                    existingQueue.Enqueue(baseUrl);
+                    return existingQueue;
+                }
+            );
+            
+            if (!cDicListaUsuarios_HiperVinculos.ContainsKey(quien))
+            {
+                cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
+            }
+
+            Trio<string, List<string>, DateTime> trio = new();
+            List<string> l_hiper = new List<string>();
             do
             {
                 if (interval <= (DateTime.Now - lastExecution))
                 {
                     lastExecution = DateTime.Now;
-                    WriterSender.TryWrite(new Trio<Bot, string,string>(this, donde, strArray[i]));
+                    if (strArray[i].Contains("=>"))
+                    {
+                        if (!strArray[i].Contains("gemini:"))
+                        {
+                            l_hiper.Add("=> " + baseUrl + strArray[i].Replace("=> ", "").TrimEnd());
+                        }
+                        else
+                        {
+                            l_hiper.Add(strArray[i].TrimEnd());
+                        }
+
+                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                            "[" + j + "] " + strArray[i].TrimEnd()));
+                        i++;
+                        j++;
+                        // Console.WriteLine("[" + i + "] " + strArray[i]);
+                        continue;
+                    }
+
+                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
                     i++;
                 }
             } while (strArray.Length > i);
 
-            return result;
+            trio = new Trio<string, List<string>, DateTime>(baseUrl, l_hiper, DateTime.Now);
+
+            List<Trio<string, List<string>, DateTime>> l_baseTrio = new();
+            List<Trio<string, List<string>, DateTime>> l_originalTrio = new();
+            cDicListaUsuarios_HiperVinculos.TryGetValue(quien, out l_baseTrio);
+            l_originalTrio = l_baseTrio;
+            l_baseTrio.Add(trio);
+            cDicListaUsuarios_HiperVinculos.TryUpdate(quien, l_baseTrio, l_originalTrio);
+
+            result = "Commands available: [B]ack ; [#] to use link ; You are Here: "+baseUrl;
+            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, result));
+            return string.Empty;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine("FetchGeminiGem: " + e.Message);
             return string.Empty;
         }
     }
-    
+
     public async Task<string> FetchGopherHole(string item, Match regex)
     {
         try
@@ -592,24 +691,144 @@ public class Bot
             {
                 donde = this.usuarioCanal;
             }
-          
+            
+            string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
+
             DateTime lastExecution = DateTime.Now;
             TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
             string abb = FetchGopherSiteAsync(item, regex).GetAwaiter().GetResult();
-            string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
-            int i = 0;
+            string[] strArray = abb.Split("\n");
+            int i = 0, j = 0;
             string result = string.Empty;
+            string baseUrl = item;
+            if (baseUrl.Contains(">"))
+            {
+                baseUrl = item.Split(">", StringSplitOptions.TrimEntries)[1];
+            }
+
+            cDicListaUsuarios_HiperLinkActivo.AddOrUpdate(quien, new Par<string, DateTime>(baseUrl, DateTime.Now),
+                (key, value) => new Par<string, DateTime>(baseUrl, DateTime.Now));
+
+            cDicUsuarios_Historial.AddOrUpdate(
+                quien, 
+                new ConcurrentQueue<string>(new[] { baseUrl }), 
+                (key, existingQueue) => {
+                    existingQueue.Enqueue(baseUrl);
+                    return existingQueue;
+                }
+            );
+            
+            if (!cDicListaUsuarios_HiperVinculos.ContainsKey(quien))
+            {
+                cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
+            }
+
+            Trio<string, List<string>, DateTime> trio = new();
+            List<string> l_hiper = new List<string>();
             do
             {
                 if (interval <= (DateTime.Now - lastExecution))
                 {
                     lastExecution = DateTime.Now;
-                    WriterSender.TryWrite(new Trio<Bot, string,string>(this, donde, strArray[i]));
+                    if (strArray[i].Contains(" 0"))
+                    {
+                        if (!strArray[i].Contains("gopher:"))
+                        {
+                            l_hiper.Add(" 0 " + baseUrl + strArray[i].Replace(" 0", "").TrimEnd());
+                        }
+                        else
+                        {
+                            l_hiper.Add(strArray[i].TrimEnd());
+                        }
+
+                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                            "[" + j + "] " + strArray[i].TrimEnd()));
+                        i++;
+                        j++;
+                        // Console.WriteLine("[" + i + "] " + strArray[i]);
+                        continue;
+                    }
+
+                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
                     i++;
                 }
             } while (strArray.Length > i);
 
-            return result;
+            // DateTime lastExecution = DateTime.Now;
+            // TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
+            // string abb = FetchGopherSiteAsync(item, regex).GetAwaiter().GetResult();
+            // string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
+            // int i = 0;
+            // string result = string.Empty;
+            // do
+            // {
+            //     if (interval <= (DateTime.Now - lastExecution))
+            //     {
+            //         lastExecution = DateTime.Now;
+            //         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i]));
+            //         i++;
+            //     }
+            // } while (strArray.Length > i);
+
+            trio = new Trio<string, List<string>, DateTime>(baseUrl, l_hiper, DateTime.Now);
+
+            List<Trio<string, List<string>, DateTime>> l_baseTrio = new();
+            List<Trio<string, List<string>, DateTime>> l_originalTrio = new();
+            cDicListaUsuarios_HiperVinculos.TryGetValue(quien, out l_baseTrio);
+            l_originalTrio = l_baseTrio;
+            l_baseTrio.Add(trio);
+            cDicListaUsuarios_HiperVinculos.TryUpdate(quien, l_baseTrio, l_originalTrio);
+
+            result = "Commands available: [B]ack ; [#] to use link ; You are Here: "+baseUrl;
+            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, result));
+            // return result;
+            return string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("FetchGopherHole: " + e.Message);
+            return string.Empty;
+        }
+    }
+
+    public static async Task<string> FetchGeminiSiteAsync(string urlString, Match regex)
+    {
+        try
+        {
+            Uri uri = null;
+            if (urlString.Contains(">"))
+            {
+                uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
+            }
+            else
+            {
+                uri = new Uri(urlString);
+            }
+
+            if (!uri.Scheme.Equals("gemini", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("URL must use the gemini:// scheme.");
+
+            // Gemini protocol defaults to port 1965
+            int port = uri.Port == -1 ? 1965 : uri.Port;
+
+            using TcpClient client = new TcpClient();
+            await client.ConnectAsync(uri.Host, port);
+
+            // Establish the TLS stream
+            using var sslStream = new SslStream(client.GetStream(), false,
+                (sender, certificate, chain, sslPolicyErrors) =>
+                    true); // Trust TOFU/Self-signed certs typical of Gemini
+
+            await sslStream.AuthenticateAsClientAsync(uri.Host);
+
+            // Gemini requests are structured exactly as: <URL><CR><LF>
+            byte[] requestBytes = Encoding.UTF8.GetBytes($"{uri}\r\n");
+            await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length);
+            await sslStream.FlushAsync();
+
+            // Read the server response
+            using var reader = new StreamReader(sslStream, Encoding.UTF8);
+            return await reader.ReadToEndAsync();
         }
         catch (Exception e)
         {
@@ -618,38 +837,10 @@ public class Bot
         }
     }
 
-    public static async Task<string> FetchGeminiSiteAsync(string urlString, Match regex)
-    {
-        Uri uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
-        if (!uri.Scheme.Equals("gemini", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("URL must use the gemini:// scheme.");
-        
-        // Gemini protocol defaults to port 1965
-        int port = uri.Port == -1 ? 1965 : uri.Port;
-
-        using TcpClient client = new TcpClient();
-        await client.ConnectAsync(uri.Host, port);
-
-        // Establish the TLS stream
-        using var sslStream = new SslStream(client.GetStream(), false,
-            (sender, certificate, chain, sslPolicyErrors) => true); // Trust TOFU/Self-signed certs typical of Gemini
-
-        await sslStream.AuthenticateAsClientAsync(uri.Host);
-
-        // Gemini requests are structured exactly as: <URL><CR><LF>
-        byte[] requestBytes = Encoding.UTF8.GetBytes($"{uri}\r\n");
-        await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length);
-        await sslStream.FlushAsync();
-
-        // Read the server response
-        using var reader = new StreamReader(sslStream, Encoding.UTF8);
-        return await reader.ReadToEndAsync();
-    }
-
     public static async Task<string> FetchGopherSiteAsync(string urlString, Match regex)
     {
         // Validar y parsear la URL de Gopher
-        if (!Uri.TryCreate(urlString.Split(">", StringSplitOptions.TrimEntries)[1], UriKind.Absolute, out Uri? uri) || 
+        if (!Uri.TryCreate(urlString.Split(">", StringSplitOptions.TrimEntries)[1], UriKind.Absolute, out Uri? uri) ||
             !uri.Scheme.Equals("gopher", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("La URL debe ser absoluta y usar el esquema gopher://");
@@ -667,7 +858,7 @@ public class Bot
         // Extraer el selector (Gopher requiere el path limpio sin el caracter de tipo inicial)
         // uri.AbsolutePath usualmente incluye un "/" inicial. Si está vacío o es solo "/", se envía cadena vacía.
         string selector = uri.AbsolutePath;
-        string filtrado = selector.Replace("1","").Replace("//","");
+        string filtrado = selector.Replace("1", "").Replace("//", "");
 
         // Las solicitudes Gopher se estructuran exactamente como: <Selector><CR><LF>
         byte[] requestBytes = Encoding.UTF8.GetBytes(filtrado.TrimStart('/').TrimEnd('/') + "\r\n");
@@ -678,5 +869,111 @@ public class Bot
         using var reader = new StreamReader(networkStream, Encoding.UTF8);
         return await reader.ReadToEndAsync();
     }
+
+    public string FollowLinkSite(string item, Match regex)
+    {
+        try
+        {
+            string str = item.Replace("[", "").Replace("]", "");
+            int linkNumero = 0;
+
+            string donde = this.dedonde;
+
+            if (donde != this.canal)
+            {
+                donde = this.usuarioCanal;
+            }
+            
+            string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
+
+            if (!int.TryParse(str, out linkNumero))
+            {
+                if(str == "B")
+                {
+                    ConcurrentQueue<string> cQHistory = new ConcurrentQueue<string>();
+                    cDicUsuarios_Historial.TryGetValue(quien, out cQHistory);
+                    string backUrl = string.Empty;
+                    cQHistory.TryDequeue(out backUrl);
+                    
+                    if (backUrl.Contains("gemini"))
+                    {  
+                        Thread thrd = new Thread(() => FetchGeminiSite(backUrl, regex));
+                        thrGeminiExplorations.Add(thrd);
+                        thrd.Start();
+                    }
+                    else if (backUrl.Contains("gopher"))
+                    {
+                        Thread thrd = new Thread(() => FetchGopherSite(backUrl, regex));
+                        thrGeminiExplorations.Add(thrd);
+                        thrd.Start();
+                    }
+                    else
+                    {
+                    }
+                    
+                    Cleaner();
+                    Console.WriteLine("FollowLinkSite");
+                    return "1";
+                }
+                
+                
+                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                    "Favor enviar el número del link requerido"));
+                return "0";
+            }
+
+            List<Trio<string, List<string>, DateTime>> info = new List<Trio<string, List<string>, DateTime>>();
+            cDicListaUsuarios_HiperVinculos.TryGetValue(quien, out info);
+            if (info.Count == 0)
+            {
+                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                    "Link Inválido, por favor intente con otro"));
+                return "0";
+            }
+
+            Par<string, DateTime> Par_currentActiveUrl_TimeMark = new();
+            cDicListaUsuarios_HiperLinkActivo.TryGetValue(quien, out Par_currentActiveUrl_TimeMark);
+
+            //TODO: Necesitas pasar la URL aca para poder filtrar propiamente la lista que necesitas y
+            //continuar con el procesamiento del hyperlink
+            Trio<string, List<string>, DateTime>
+                precise = info.Where(c => c.Item1 == Par_currentActiveUrl_TimeMark.Item1).FirstOrDefault();
+            if (precise.Item2.Count == 0)
+            {
+                Console.WriteLine("FollowLinkSite: tiro Default");
+                return "0";
+            }
+
+            string prepare = string.Empty;
+
+            if (precise.Item1.Contains("gemini"))
+            {  
+                prepare = precise.Item2[linkNumero].Replace("=> ", "").Split("\t", StringSplitOptions.TrimEntries)[0];
+                Thread thrd = new Thread(() => FetchGeminiSite(prepare, regex));
+                thrGeminiExplorations.Add(thrd);
+                thrd.Start();
+            }
+            else if (precise.Item1.Contains("gopher"))
+            {
+                prepare = precise.Item2[linkNumero].Replace(" 0", "").Split("\t", StringSplitOptions.TrimEntries)[0];
+                Thread thrd = new Thread(() => FetchGopherSite(prepare, regex));
+                thrGeminiExplorations.Add(thrd);
+                thrd.Start();
+            }
+            else
+            {
+            }
+
+            Cleaner();
+            Console.WriteLine("FollowLinkSite");
+            return "1";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return "0";
+        }
+    }
+
     #endregion
 }
