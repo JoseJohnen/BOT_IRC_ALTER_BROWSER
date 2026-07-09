@@ -38,9 +38,9 @@ public class Bot
 
     //This saves the user navigational history
     //quien, QueueUrls
-    private ConcurrentDictionary<string, ConcurrentQueue<string>> cDicUsuarios_Historial =
-        new ConcurrentDictionary<string, ConcurrentQueue<string>>();
-    
+    private ConcurrentDictionary<string, ConcurrentStack<string>> cDicUsuarios_Historial =
+        new ConcurrentDictionary<string, ConcurrentStack<string>>();
+
     //This defines where is quien, so to know which list of links use with the user;
     //quien, activeUrl, FechaUltimaAcción
     private ConcurrentDictionary<string, Par<string, DateTime>> cDicListaUsuarios_HiperLinkActivo =
@@ -417,7 +417,7 @@ public class Bot
                     vr.Value.RemoveAll(c => (DateTime.Now - c.Item3) > tSpan);
                 }
             }
-            
+
             return true;
         }
         catch (Exception e)
@@ -475,20 +475,20 @@ public class Bot
     #endregion
 
     #region Functions than make the bot do something (This is where the extended functions should go)
+
     public string Back(string item, Match regex)
     {
         try
         {
-
             return string.Empty;
         }
         catch (Exception e)
         {
-            Console.WriteLine("Back: "+e.Message);
+            Console.WriteLine("Back: " + e.Message);
             return string.Empty;
-        }    
+        }
     }
-    
+
     public string DadosDeRol(string item, Match regex)
     {
         string[] numerosRelevnateDado = item.Split(" ", StringSplitOptions.RemoveEmptyEntries)[0]
@@ -615,16 +615,17 @@ public class Bot
 
             cDicListaUsuarios_HiperLinkActivo.AddOrUpdate(quien, new Par<string, DateTime>(baseUrl, DateTime.Now),
                 (key, value) => new Par<string, DateTime>(baseUrl, DateTime.Now));
-            
+
             cDicUsuarios_Historial.AddOrUpdate(
-                quien, 
-                new ConcurrentQueue<string>(new[] { baseUrl }), 
-                (key, existingQueue) => {
-                    existingQueue.Enqueue(baseUrl);
-                    return existingQueue;
+                quien,
+                new ConcurrentStack<string>(new[] { baseUrl }),
+                (key, existingStack) =>
+                {
+                    existingStack.Push(baseUrl);
+                    return existingStack;
                 }
             );
-            
+
             if (!cDicListaUsuarios_HiperVinculos.ContainsKey(quien))
             {
                 cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
@@ -648,8 +649,15 @@ public class Bot
                             l_hiper.Add(strArray[i].TrimEnd());
                         }
 
+                        if (strArray[i].Contains('\t'))
+                        {
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + strArray[i].Replace("\t\t","\t").Split('\t',StringSplitOptions.TrimEntries)[1].TrimEnd()));
+                        }
+                        else
+                        {
                         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
                             "[" + j + "] " + strArray[i].TrimEnd()));
+                        }
                         i++;
                         j++;
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
@@ -670,7 +678,7 @@ public class Bot
             l_baseTrio.Add(trio);
             cDicListaUsuarios_HiperVinculos.TryUpdate(quien, l_baseTrio, l_originalTrio);
 
-            result = "Commands available: [B]ack ; [#] to use link ; You are Here: "+baseUrl;
+            result = "Commands available: [B]ack ; [#] to use link ; You are Here: " + baseUrl;
             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, result));
             return string.Empty;
         }
@@ -691,7 +699,7 @@ public class Bot
             {
                 donde = this.usuarioCanal;
             }
-            
+
             string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
 
             DateTime lastExecution = DateTime.Now;
@@ -710,19 +718,20 @@ public class Bot
                 (key, value) => new Par<string, DateTime>(baseUrl, DateTime.Now));
 
             cDicUsuarios_Historial.AddOrUpdate(
-                quien, 
-                new ConcurrentQueue<string>(new[] { baseUrl }), 
-                (key, existingQueue) => {
-                    existingQueue.Enqueue(baseUrl);
-                    return existingQueue;
+                quien,
+                new ConcurrentStack<string>(new[] { baseUrl }),
+                (key, existingStack) =>
+                {
+                    existingStack.Push(baseUrl);
+                    return existingStack;
                 }
             );
-            
+
             if (!cDicListaUsuarios_HiperVinculos.ContainsKey(quien))
             {
                 cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
             }
-
+            
             Trio<string, List<string>, DateTime> trio = new();
             List<string> l_hiper = new List<string>();
             do
@@ -730,19 +739,46 @@ public class Bot
                 if (interval <= (DateTime.Now - lastExecution))
                 {
                     lastExecution = DateTime.Now;
-                    if (strArray[i].Contains(" 0"))
+                    
+                    if (strArray[i].Length < 2)
                     {
+                        i++;
+                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, " "));
+                        continue;
+                    }
+                    
+                    string firstCharacter = strArray[i].Substring(0,2);
+                    if ((firstCharacter.Contains("0")
+                        || firstCharacter.Contains("4")
+                        || firstCharacter.Contains("5")
+                        || firstCharacter.Contains("6")
+                        || firstCharacter.Contains("9"))
+                        && (!firstCharacter.Contains(".")
+                            && !firstCharacter.Contains("-")
+                            && !firstCharacter.Contains(")")
+                            && !firstCharacter.Contains("]"))
+                        )
+                    {
+                        string getTypeFile = strArray[i].Substring(0, 1);
                         if (!strArray[i].Contains("gopher:"))
                         {
-                            l_hiper.Add(" 0 " + baseUrl + strArray[i].Replace(" 0", "").TrimEnd());
+                            string rootUrl = baseUrl.Substring(0, baseUrl.Replace("gopher://","").IndexOf("/")+9);
+                            l_hiper.Add(rootUrl + "/" + getTypeFile + strArray[i].Split('\t', StringSplitOptions.TrimEntries)[1].TrimEnd());
                         }
                         else
                         {
                             l_hiper.Add(strArray[i].TrimEnd());
                         }
 
+                        if (strArray[i].Contains('\t'))
+                        {
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + strArray[i].Split('\t',StringSplitOptions.TrimEntries)[0].TrimEnd()));
+                        }
+                        else
+                        {
                         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
                             "[" + j + "] " + strArray[i].TrimEnd()));
+                        }
                         i++;
                         j++;
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
@@ -752,24 +788,8 @@ public class Bot
                     WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
                     i++;
                 }
-            } while (strArray.Length > i);
-
-            // DateTime lastExecution = DateTime.Now;
-            // TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
-            // string abb = FetchGopherSiteAsync(item, regex).GetAwaiter().GetResult();
-            // string[] strArray = abb.Split("\n", StringSplitOptions.TrimEntries);
-            // int i = 0;
-            // string result = string.Empty;
-            // do
-            // {
-            //     if (interval <= (DateTime.Now - lastExecution))
-            //     {
-            //         lastExecution = DateTime.Now;
-            //         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i]));
-            //         i++;
-            //     }
-            // } while (strArray.Length > i);
-
+            } while (strArray.Length > (i+1));
+            
             trio = new Trio<string, List<string>, DateTime>(baseUrl, l_hiper, DateTime.Now);
 
             List<Trio<string, List<string>, DateTime>> l_baseTrio = new();
@@ -779,7 +799,7 @@ public class Bot
             l_baseTrio.Add(trio);
             cDicListaUsuarios_HiperVinculos.TryUpdate(quien, l_baseTrio, l_originalTrio);
 
-            result = "Commands available: [B]ack ; [#] to use link ; You are Here: "+baseUrl;
+            result = "Commands available: [B]ack ; [#] to use link ; You are Here: " + baseUrl;
             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, result));
             // return result;
             return string.Empty;
@@ -839,9 +859,17 @@ public class Bot
 
     public static async Task<string> FetchGopherSiteAsync(string urlString, Match regex)
     {
-        // Validar y parsear la URL de Gopher
-        if (!Uri.TryCreate(urlString.Split(">", StringSplitOptions.TrimEntries)[1], UriKind.Absolute, out Uri? uri) ||
-            !uri.Scheme.Equals("gopher", StringComparison.OrdinalIgnoreCase))
+        Uri uri = null;
+            if (urlString.Contains(">"))
+            {
+                uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
+            }
+            else
+            {
+                uri = new Uri(urlString);
+            }
+            
+        if (!uri.Scheme.Equals("gopher", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("La URL debe ser absoluta y usar el esquema gopher://");
         }
@@ -858,7 +886,7 @@ public class Bot
         // Extraer el selector (Gopher requiere el path limpio sin el caracter de tipo inicial)
         // uri.AbsolutePath usualmente incluye un "/" inicial. Si está vacío o es solo "/", se envía cadena vacía.
         string selector = uri.AbsolutePath;
-        string filtrado = selector.Replace("1", "").Replace("//", "");
+        string filtrado = selector.Substring(3).Replace("//", "");
 
         // Las solicitudes Gopher se estructuran exactamente como: <Selector><CR><LF>
         byte[] requestBytes = Encoding.UTF8.GetBytes(filtrado.TrimStart('/').TrimEnd('/') + "\r\n");
@@ -883,20 +911,30 @@ public class Bot
             {
                 donde = this.usuarioCanal;
             }
-            
+
             string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
 
             if (!int.TryParse(str, out linkNumero))
             {
-                if(str == "B")
+                if ((str == "B") || (str == "b"))
                 {
-                    ConcurrentQueue<string> cQHistory = new ConcurrentQueue<string>();
+                    ConcurrentStack<string> cQHistory = new ConcurrentStack<string>();
                     cDicUsuarios_Historial.TryGetValue(quien, out cQHistory);
                     string backUrl = string.Empty;
-                    cQHistory.TryDequeue(out backUrl);
-                    
+                    int i = 0;
+                    bool tryPop = false;
+                    do
+                    {
+                        tryPop = cQHistory.TryPop(out backUrl);
+                        if (i < 1)
+                        {
+                            tryPop = false;
+                        }
+                        i++;
+                    } while (!tryPop);
+
                     if (backUrl.Contains("gemini"))
-                    {  
+                    {
                         Thread thrd = new Thread(() => FetchGeminiSite(backUrl, regex));
                         thrGeminiExplorations.Add(thrd);
                         thrd.Start();
@@ -910,13 +948,12 @@ public class Bot
                     else
                     {
                     }
-                    
+
                     Cleaner();
                     Console.WriteLine("FollowLinkSite");
                     return "1";
                 }
-                
-                
+
                 WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
                     "Favor enviar el número del link requerido"));
                 return "0";
@@ -933,9 +970,7 @@ public class Bot
 
             Par<string, DateTime> Par_currentActiveUrl_TimeMark = new();
             cDicListaUsuarios_HiperLinkActivo.TryGetValue(quien, out Par_currentActiveUrl_TimeMark);
-
-            //TODO: Necesitas pasar la URL aca para poder filtrar propiamente la lista que necesitas y
-            //continuar con el procesamiento del hyperlink
+            
             Trio<string, List<string>, DateTime>
                 precise = info.Where(c => c.Item1 == Par_currentActiveUrl_TimeMark.Item1).FirstOrDefault();
             if (precise.Item2.Count == 0)
@@ -947,7 +982,7 @@ public class Bot
             string prepare = string.Empty;
 
             if (precise.Item1.Contains("gemini"))
-            {  
+            {
                 prepare = precise.Item2[linkNumero].Replace("=> ", "").Split("\t", StringSplitOptions.TrimEntries)[0];
                 Thread thrd = new Thread(() => FetchGeminiSite(prepare, regex));
                 thrGeminiExplorations.Add(thrd);
@@ -955,7 +990,7 @@ public class Bot
             }
             else if (precise.Item1.Contains("gopher"))
             {
-                prepare = precise.Item2[linkNumero].Replace(" 0", "").Split("\t", StringSplitOptions.TrimEntries)[0];
+                prepare = precise.Item2[linkNumero];
                 Thread thrd = new Thread(() => FetchGopherSite(prepare, regex));
                 thrGeminiExplorations.Add(thrd);
                 thrd.Start();
