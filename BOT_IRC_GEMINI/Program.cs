@@ -7,6 +7,7 @@ class Program
     public static Bot bot = null;
     
     private static Thread _GeminiServer;
+    private static Thread _GopherServer;
 
     private static IConfiguration _configuration;
     
@@ -45,6 +46,9 @@ class Program
         
         _GeminiServer = new Thread(() => Gemini.StartGeminiServer());
         _GeminiServer.Start();
+
+        _GopherServer = new Thread(() => Gopher.StartGopherServer());
+        _GopherServer.Start();
         l_bots = Config.Config_ObtenerBots(_configuration);
 
         MainAsync();

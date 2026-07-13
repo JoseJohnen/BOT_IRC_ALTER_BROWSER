@@ -7,7 +7,10 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-      <None Include="root\**\*">
+      <None Include="gopherRoot\**\*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="geminiRoot\**\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Include="cert.pem;key.pem">

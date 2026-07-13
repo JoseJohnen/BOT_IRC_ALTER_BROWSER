@@ -651,13 +651,17 @@ public class Bot
 
                         if (strArray[i].Contains('\t'))
                         {
-                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + strArray[i].Replace("\t\t","\t").Split('\t',StringSplitOptions.TrimEntries)[1].TrimEnd()));
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " +
+                                strArray[i].Replace("\t\t", "\t").Split('\t', StringSplitOptions.TrimEntries)[1]
+                                    .TrimEnd()));
                         }
                         else
                         {
-                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                            "[" + j + "] " + strArray[i].TrimEnd()));
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " + strArray[i].TrimEnd()));
                         }
+
                         i++;
                         j++;
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
@@ -731,7 +735,7 @@ public class Bot
             {
                 cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
             }
-            
+
             Trio<string, List<string>, DateTime> trio = new();
             List<string> l_hiper = new List<string>();
             do
@@ -739,31 +743,32 @@ public class Bot
                 if (interval <= (DateTime.Now - lastExecution))
                 {
                     lastExecution = DateTime.Now;
-                    
+
                     if (strArray[i].Length < 2)
                     {
                         i++;
                         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, " "));
                         continue;
                     }
-                    
-                    string firstCharacter = strArray[i].Substring(0,2);
+
+                    string firstCharacter = strArray[i].Substring(0, 2);
                     if ((firstCharacter.Contains("0")
-                        || firstCharacter.Contains("4")
-                        || firstCharacter.Contains("5")
-                        || firstCharacter.Contains("6")
-                        || firstCharacter.Contains("9"))
+                         || firstCharacter.Contains("4")
+                         || firstCharacter.Contains("5")
+                         || firstCharacter.Contains("6")
+                         || firstCharacter.Contains("9"))
                         && (!firstCharacter.Contains(".")
                             && !firstCharacter.Contains("-")
                             && !firstCharacter.Contains(")")
                             && !firstCharacter.Contains("]"))
-                        )
+                       )
                     {
                         string getTypeFile = strArray[i].Substring(0, 1);
                         if (!strArray[i].Contains("gopher:"))
                         {
-                            string rootUrl = baseUrl.Substring(0, baseUrl.Replace("gopher://","").IndexOf("/")+9);
-                            l_hiper.Add(rootUrl + "/" + getTypeFile + strArray[i].Split('\t', StringSplitOptions.TrimEntries)[1].TrimEnd());
+                            string rootUrl = baseUrl.Substring(0, baseUrl.Replace("gopher://", "").IndexOf("/") + 9);
+                            l_hiper.Add(rootUrl + "/" + getTypeFile +
+                                        strArray[i].Split('\t', StringSplitOptions.TrimEntries)[1].TrimEnd());
                         }
                         else
                         {
@@ -772,13 +777,15 @@ public class Bot
 
                         if (strArray[i].Contains('\t'))
                         {
-                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + strArray[i].Split('\t',StringSplitOptions.TrimEntries)[0].TrimEnd()));
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " + strArray[i].Split('\t', StringSplitOptions.TrimEntries)[0].TrimEnd()));
                         }
                         else
                         {
-                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                            "[" + j + "] " + strArray[i].TrimEnd()));
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " + strArray[i].TrimEnd()));
                         }
+
                         i++;
                         j++;
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
@@ -788,8 +795,8 @@ public class Bot
                     WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
                     i++;
                 }
-            } while (strArray.Length > (i+1));
-            
+            } while (strArray.Length > (i + 1));
+
             trio = new Trio<string, List<string>, DateTime>(baseUrl, l_hiper, DateTime.Now);
 
             List<Trio<string, List<string>, DateTime>> l_baseTrio = new();
@@ -860,15 +867,15 @@ public class Bot
     public static async Task<string> FetchGopherSiteAsync(string urlString, Match regex)
     {
         Uri uri = null;
-            if (urlString.Contains(">"))
-            {
-                uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
-            }
-            else
-            {
-                uri = new Uri(urlString);
-            }
-            
+        if (urlString.Contains(">"))
+        {
+            uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
+        }
+        else
+        {
+            uri = new Uri(urlString);
+        }
+
         if (!uri.Scheme.Equals("gopher", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("La URL debe ser absoluta y usar el esquema gopher://");
@@ -886,7 +893,11 @@ public class Bot
         // Extraer el selector (Gopher requiere el path limpio sin el caracter de tipo inicial)
         // uri.AbsolutePath usualmente incluye un "/" inicial. Si está vacío o es solo "/", se envía cadena vacía.
         string selector = uri.AbsolutePath;
-        string filtrado = selector.Substring(3).Replace("//", "");
+        string filtrado = selector.Replace("//", "");
+        if (selector.Length >= 3)
+        {
+            filtrado = selector.Substring(3).Replace("//", "");
+        }
 
         // Las solicitudes Gopher se estructuran exactamente como: <Selector><CR><LF>
         byte[] requestBytes = Encoding.UTF8.GetBytes(filtrado.TrimStart('/').TrimEnd('/') + "\r\n");
@@ -923,6 +934,12 @@ public class Bot
                     string backUrl = string.Empty;
                     int i = 0;
                     bool tryPop = false;
+                    if (cQHistory == null || cQHistory.Count <= 1)
+                    {
+                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                            "There is no place before this one to go back to, try another option or command"));
+                        return "1";
+                    }
                     do
                     {
                         tryPop = cQHistory.TryPop(out backUrl);
@@ -930,6 +947,7 @@ public class Bot
                         {
                             tryPop = false;
                         }
+
                         i++;
                     } while (!tryPop);
 
@@ -970,7 +988,7 @@ public class Bot
 
             Par<string, DateTime> Par_currentActiveUrl_TimeMark = new();
             cDicListaUsuarios_HiperLinkActivo.TryGetValue(quien, out Par_currentActiveUrl_TimeMark);
-            
+
             Trio<string, List<string>, DateTime>
                 precise = info.Where(c => c.Item1 == Par_currentActiveUrl_TimeMark.Item1).FirstOrDefault();
             if (precise.Item2.Count == 0)

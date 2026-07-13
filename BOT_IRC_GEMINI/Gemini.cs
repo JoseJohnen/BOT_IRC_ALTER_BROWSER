@@ -8,7 +8,7 @@ namespace BOT_IRC_GEMINI;
 
 public class Gemini
 {
-    public static string _pth = "root";
+    public static string _pth = "geminiRoot";
     private static string _prt = "1965";
     private static string _cert1 = "cert.pem";
     private static string _cert2 = "key.pem";
@@ -54,11 +54,11 @@ public class Gemini
                     using SslStream ssl =
                         new SslStream(tcp.GetStream());
 
-                    // await ssl.AuthenticateAsServerAsync(
-                    //     cert,
-                    //     false,
-                    //     SslProtocols.Tls12 | SslProtocols.Tls13,
-                    //     false);
+                    await ssl.AuthenticateAsServerAsync(
+                        cert,
+                        false,
+                        SslProtocols.Tls12 | SslProtocols.Tls13,
+                        false);
 
                     using StreamReader reader =
                         new StreamReader(ssl);

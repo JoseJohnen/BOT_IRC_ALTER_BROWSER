@@ -1,0 +1,3 @@
+Notas del sistema:
+- El servidor Gemini funciona en el puerto 1965.
+- El servidor Gopher funciona en el puerto 70.

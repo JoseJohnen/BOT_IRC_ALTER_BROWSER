@@ -1,0 +1,13 @@
+=================================================
+¡BIENVENIDO A MI SERVIDOR GOPHER EN C#!
+=================================================
+
+Este es un archivo de texto plano (Item Tipo 0)
+servido directamente desde el sistema de archivos.
+
+Gopher es genial porque es ligero y ultra rapido.
+
+0Does this gopher menu look correct?	/gopher/proxy	gopher.floodgap.com	70
+
+0Ver notas del servidor (notas.txt)	/documentos/notas.txt	localhost	7070
+1Explorar la carpeta de documentos	/documentos	localhost	7070
