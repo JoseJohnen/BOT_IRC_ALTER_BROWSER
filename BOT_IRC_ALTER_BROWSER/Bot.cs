@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Channels; // No es vital pero me encantan el uso de las expresiones regulares
 
 
-namespace BOT_IRC_GEMINI;
+namespace BOT_IRC_ALTER_BROWSER;
 
 public class Bot
 {

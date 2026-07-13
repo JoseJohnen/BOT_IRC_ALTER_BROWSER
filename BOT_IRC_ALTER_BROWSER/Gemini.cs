@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
-namespace BOT_IRC_GEMINI;
+namespace BOT_IRC_ALTER_BROWSER;
 
 public class Gemini
 {

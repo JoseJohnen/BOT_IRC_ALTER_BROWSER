@@ -1,4 +1,4 @@
-namespace BOT_IRC_GEMINI;
+namespace BOT_IRC_ALTER_BROWSER;
 
 [Serializable]
 public class Par<T1, T2>

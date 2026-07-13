@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace BOT_IRC_GEMINI;
+namespace BOT_IRC_ALTER_BROWSER;
 
 public static class Config
 {

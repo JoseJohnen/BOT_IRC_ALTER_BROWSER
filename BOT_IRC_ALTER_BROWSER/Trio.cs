@@ -1,4 +1,4 @@
-namespace BOT_IRC_GEMINI;
+namespace BOT_IRC_ALTER_BROWSER;
 
 [Serializable]
 public class Trio<T1, T2, T3>
