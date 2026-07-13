@@ -9,12 +9,10 @@ namespace BOT_IRC_ALTER_BROWSER;
 public class Gemini
 {
     public static string _pth = "geminiRoot";
-    private static string _prt = "1965";
-    private static string _cert1 = "cert.pem";
-    private static string _cert2 = "key.pem";
+    public static string _prt = "1965";
+    public static string _cert1 = "cert.pem";
+    public static string _cert2 = "key.pem";
 
-    public static string IRCURI = string.Empty;
-        
     public static async void StartGeminiServer(string[] args = null)
     {
         if (args != null)

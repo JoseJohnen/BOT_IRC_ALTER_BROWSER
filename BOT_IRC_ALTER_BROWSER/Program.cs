@@ -6,8 +6,8 @@ class Program
 {
     public static Bot bot = null;
     
-    private static Thread _GeminiServer;
-    private static Thread _GopherServer;
+    public static Thread _GeminiServer;
+    public static Thread _GopherServer;
 
     private static IConfiguration _configuration;
     
@@ -20,17 +20,6 @@ class Program
     
     static void Main(string[] args)
     {
-        //TODO: 
-        // - Hacer que se lea el archivo GEMINI en cuestión
-        // - Hacer que se muestre por IRC
-        // - Hacer que se pueda navegar entre los puntos con IRC
-        // - implementar encendido y apagado de servidor GEMINI a través de IRC
-        // - Implementar demas ejemplos visuales GEMINI
-        // - Implementar parámetros de bot para recibir mensajes (FCR)
-        // Hacer que el bot también sirva como bot puente (IRC y otro servicio TLS/SSL)
-        // Ver como disponer de enviar y recibir archivos usando DCC (por el lado de bot IRC)
-        // Ver como implementar la recepción de query y los certificados por el lado de GEMINI
-        
         #region appsettings.json related
         string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(environment))
@@ -44,11 +33,7 @@ class Program
             .AddJsonFile("appsettings" + environment + ".json", optional: false, reloadOnChange: true) // Requires Microsoft.Extensions.Configuration.Json
             .Build();
         
-        _GeminiServer = new Thread(() => Gemini.StartGeminiServer());
-        _GeminiServer.Start();
-
-        _GopherServer = new Thread(() => Gopher.StartGopherServer());
-        _GopherServer.Start();
+        Config.Config_PrepararHostings(_configuration);
         l_bots = Config.Config_ObtenerBots(_configuration);
 
         MainAsync();

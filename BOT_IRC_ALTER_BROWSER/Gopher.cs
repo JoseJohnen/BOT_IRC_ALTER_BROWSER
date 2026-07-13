@@ -6,10 +6,8 @@ using System.Net.Sockets;
 public class Gopher
 {
     public static string _pth = "gopherRoot";
-    private static string _prt = "7070";
-    private static string _lch = "localhost";
-    private static string _cert1 = "cert.pem";
-    private static string _cert2 = "key.pem";
+    public static string _prt = "7070";
+    public static string _lch = "localhost";
 
     public static async void StartGopherServer(string[] args = null)
     {
