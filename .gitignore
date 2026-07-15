@@ -3,4 +3,4 @@
 /BOT_IRC_ALTER_BROWSER/server.pfx
 [Bb]in/
 [Oo]bj/
-
+/BOT_IRC_ALTER_BROWSER/appsettings.Development.json
