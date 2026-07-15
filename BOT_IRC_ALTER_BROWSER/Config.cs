@@ -55,20 +55,29 @@ public static class Config
         List<Bot> l_bots = new List<Bot>();
         int index = 0;
         Bot._thrSendDataIrc.Start();
-        while (true)
+        var botsSection = configurationRoot.GetSection("Bots");
+        if (!botsSection.GetChildren().Any())
         {
-            string nickname = configurationRoot[$"Bots:{index}:nickname"];
+            Console.Out.WriteLine("No hay bots definidos en la configuración. Cancelando operación.");
+            return new List<Bot>(); // Retorna una lista vacía de inmediato sin iniciar nada
+        }
+        bool isAllowed = configurationRoot[$"Bots:StartBots"].ToUpper() == "ALLOW" ? true : false;
+        while (isAllowed)
+        {
+            string nickname = configurationRoot[$"Bots:List:{index}:nickname"];
+            string password = configurationRoot[$"Bots:List:{index}:password"];
 
             if (string.IsNullOrWhiteSpace(nickname))
             {
                 break;
             }
 
-            string host = configurationRoot[$"Bots:{index}:host"];
-            string canal = configurationRoot[$"Bots:{index}:canal"];
+            string host = configurationRoot[$"Bots:List:{index}:host"];
+            string canal = configurationRoot[$"Bots:List:{index}:canal"];
 
             nBot = new Bot();
             nBot.nickname = nickname;
+            nBot.Password = password;
             nBot.host = host;
             nBot.canal = canal;
             Console.Out.WriteLine($"Bot encontrado: {nBot.nickname}");

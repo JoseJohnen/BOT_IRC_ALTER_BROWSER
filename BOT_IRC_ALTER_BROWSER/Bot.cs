@@ -17,6 +17,22 @@ public class Bot
 
     public string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
     public string nickname = "ClapTrakaLaKa"; // Establecemos la variable nickname con el nick del bot
+    private string password = ""; // Establecemos la variable password con "" porque esta vacía de base
+    
+    public string Password
+    {
+        get => password;
+        set
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                password = value;
+                return;
+            }
+            password = "";
+        }
+
+    }
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
 
     #endregion
@@ -212,6 +228,12 @@ public class Bot
                                     " 1 1 1 1"); // Usamos el comando USER para confirmar el nickname
         this.mandar_datos.Flush(); // ..
 
+        if (!string.IsNullOrWhiteSpace(Password))
+        { 
+            this.mandar_datos.WriteLine("PRIVMSG NICKSERV :IDENTIFY " + this.Password ); // Usamos el comando IDENTIFY para logear la cuenta; 
+            this.mandar_datos.Flush(); // ..
+        }
+        
         this.mandar_datos.WriteLine("JOIN " + this.canal); // Usamos el comando JOIN para entrar al canal
         this.mandar_datos.Flush(); // ..
     }

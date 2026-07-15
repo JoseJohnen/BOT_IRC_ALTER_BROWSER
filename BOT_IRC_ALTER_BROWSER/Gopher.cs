@@ -11,7 +11,7 @@ public class Gopher
 
     public static async void StartGopherServer(string[] args = null)
     {
-        if (args != null && args.Length >= 2)
+        if (args != null && args.Length >= 3)
         {
             _pth = args[0];
             _prt = args[1];
