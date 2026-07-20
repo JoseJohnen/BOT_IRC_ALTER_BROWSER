@@ -42,3 +42,11 @@ Using the relevant part of the file as an example
       "password": "password", //If the nick is registered, with this you can put the password in order for him to log in correctly through it, otherwise leave it like ""<br>
       "host": "irc.libera.chat", //The server the bot will be<br>
       "canal": "#someChannel" //The channel where the bot shall be<br>
+
+<h1>Pirate Protocol</h1>
+<h2>The main proposal and his objectives</h2>
+<p>The idea of this proposal is to have a protocol that is simple, easy to implement, and privacy friendly as much as it can a protocol be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the most possible "client" aplications than are tecnically able to do that</p>
+
+
+
+
