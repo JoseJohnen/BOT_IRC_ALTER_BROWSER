@@ -45,8 +45,47 @@ Using the relevant part of the file as an example
 
 <h1>Pirate Protocol</h1>
 <h2>The main proposal and his objectives</h2>
-<p>The idea of this proposal is to have a protocol that is simple, easy to implement, and privacy friendly as much as it can a protocol be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the most possible "client" aplications than are tecnically able to do that</p>
-
-
-
-
+<p>The idea of this proposal is to define the pirate protocol a protocol that is simple, lightweight, flexible, easy to implement and consume, and privacy friendly as much as a protocol can be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the biggest variety of client applications possible than are tecnically able to do that</p>
+<br>
+<h2>What is the reason of this?</h2>
+The main idea of this and main benefit is that, by his own definition it will do several things:<br>
+<br>
+<ul>
+<li>1) It will allow clients from different services to consume content through it from another services.</li><br>
+<li>2) It will allows clients from different services to coordinate connections to specific uses through it, according to availability.</li><br>
+</ul>
+<h2>Why not using GOPHER, GEMINI or HTTP(S) for this?</h2>
+Because the first is not that safe to implement in other services, the first and the second are mostly for presenting data, they are lacking any way to allow for easy user interaction and the third is too bloated and required too much permits and resources to do anything, without mentioning than is.
+<h2>How does that work?</h2>
+This protocol works a little different than the rest of the text-based internet protocols, it is design to, instead of working with the regular client-server structure, it works with a client-middleware-server structure in mind, the idea is keeping a client agnostic approach as much as possible, being the case than the protocol is a way to present wherever content from another service or services is trying to present to such client.<br>
+<br>
+<h3>Approach</h3>
+For this reason this is a text-based backend-enforced protocol, because the idea is than this protocol is presented from a middleware which is who makes the consumption of the other services and in order to give some order the the data from that other services is that it present them as it does.<br>
+<br>
+<h4>Text-based</h4>
+Indeed, as its neccesary to keep a client agnostic approach, you are kinda forced to use the most universal thing than any client can, in a better or worst way process, and that is text, you cannot present directly images either, but they are ways to bypass that.<br>
+<br>
+<h4>Back-End enforced</h4>
+As the approach ask to be client agnostic, and as we cannot use client-based code because of it, we are forced to do everything only from the backend, the middleware shall be the one presenting a file with the info as the protocol required, but for certain it doesn't required to be a simple reading and redirecting, it could very well modify the content of what its sending in order to dynamize the content in the same way than, for instance, PHP forums worked back in the day, presenting all the old posts than used to exist.<br>
+<br>
+<h4>Privacy Focus</h4>
+As the approach demands simplicity and such simplicity is required to being able to keep the client agnostic and the flexibility than allows that, knowing than part of that is keeping only what you can do with the backend, it comes to reason than the Privacy approach shall be simple too, and the ways to transmit communications shall be keep simple too, that is why we are using a TLC/SSH approach for both, consume the content and also communicate the data to the middleware but not in a single connection but like connections than are closed at the moment the receiver end receive what it supposed to recieve, being that the client, being that the middleware.<br>
+<br>
+<h4>Flexibility</h4>
+As the middleware will need to work in several services, the idea of this protocol is taking a flexible approach in with his links with such services, as such there is a three step approach to regulate any interaction.<br>
+<br>
+<h5>What is the three steps approach?</h5>
+The three steps approach establish that, in any interaction other than present text-based content like, for instance a file or an image, the answer from the middleware should be attempted in this way, and provided the first one cannot be done or fails the next one is tried:<br><br>
+<ul>
+<li> 1) First, try to use the ways the protocol of that services has integrated on itself; if for instance the request is done from a IRC client throug a connection established where the middleware working as a bot, the right approach is trying to send the file as DCC or in the case of an image, sending the image maybe as a file or link, like it would be handle in IRC itself.</li><br>
+<li> 2) If the approach before fails, then use the TAVERN approach; Basically the middleware gives the client an address or similar to go fetch wherever file or image he was looking for in wherever protocol the middleware owner preffered, it could be FTP, it could be HTML, it could be Usenet, it could be an ip to make a CURL call, etc. The point in this attempt is direct the user to where he can get the content he's trying to get than his client cannot hanlde by itself, more on the way of implementation of TAVERN later in the technical implementation part of this document.</li><br>
+<li> 3) If the approach before fails because there is nothing externally really handling that, or privacy requires it, then the middleware will direct to another pirate-protocol middleware which will handle the issue as a pirate-protocol request by his own ways, you of course could use for this the middleware itself than is receiving the call, but that is discouraged in favour of keep things simple and to minimize security issues, however if its required, you can absolutly do that, don't feel you are going against this protocol if doing otherwise.</li><br>
+</ul>
+<br>
+<h2>How can i implement this if X happend? (being X a limit case)</h2>
+When in doubt consider this, as a rule of thumb, flexibility and client agnosticism take precedent before servicing quality, and also, every time its possible, using the ways the service protocol than is working as medium or channel has to establish the distribution of something take precedent over the pirate-protocol ways.<br>
+<br>
+To give an example of that consider this very project where you can find this text, this bot, to act as a middleware to present GOPHER to an IRC user put the GOPHER messages surrounded by the IRC protocol messages required to present it, and as such you need to consider than the pirate-protocol will probably be handle through other protocols most of the time as GOPHER is handle in this very project, and that is the idea, so if a middleware connected to IRC need to present content in pirate-protocol this pirate-protocol content would be woven in IRC protocol for sure, as such, as in the case of a middleware working as an IRC bot if you want to make available a file you shall probably consider using DCC which is the IRC way to deal with it, this is true only because, as the middleware is acting as a bot, you know the client will be an IRC client and your channel will be the IRC server, therefore flexibility and client agnosticism takes precedent because the medium requires such flexibility, in this case, the flexibility requires the use of IRC to present the pirate-protocol content to the client, than in this context we know it will be an IRC client.<br>
+<br>
+<h2>Technicall specification document</h2>
+<b>Coming Soon...</b>
