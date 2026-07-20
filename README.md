@@ -45,26 +45,29 @@ Using the relevant part of the file as an example
 
 <h1>Pirate Protocol</h1>
 <h2>The main proposal and his objectives</h2>
-<p>The idea of this proposal is to define the pirate protocol a protocol that is simple, lightweight, flexible, easy to implement and consume, and privacy friendly as much as a protocol can be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the biggest variety of client applications possible than are tecnically able to do that</p>
+<p>The idea of this proposal is to define the pirate protocol a protocol that is simple, lightweight, flexible, easy to implement and consume, and privacy friendly as much as a protocol can be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the biggest variety of client applications possible than are tecnically able to do that being the case they were designed for that or not.</p>
 <br>
 <h2>What is the reason of this?</h2>
 The main idea of this and main benefit is that, by his own definition it will do several things:<br>
-<br>
 <ul>
 <li>1) It will allow clients from different services to consume content through it from another services.</li><br>
-<li>2) It will allows clients from different services to coordinate connections to specific uses through it, according to availability.</li><br>
+<li>2) It will allows clients from different services to coordinate connections to specific uses in other services through it, according to availability.</li><br>
+<li>3) Allows both ways of service use and content consumption; in other words it allows easy direct encapsulation and consumption of content through it to be used in another service, and/or make another service (A) being able to be used or his content consumed in another service (B)</li><br>
 </ul>
 <h2>Why not using GOPHER, GEMINI or HTTP(S) for this?</h2>
-Because the first is not that safe to implement in other services, the first and the second are mostly for presenting data, they are lacking any way to allow for easy user interaction and the third is too bloated and required too much permits and resources to do anything, without mentioning than is.
+Because the first is not that easy to implement in other services in a safe way that do not impact the other service, and both, the first and the second are mostly for presenting data mostly if not completely, they are both lacking in any significant or flexible enough way to allow for easy user interaction, meanwhile the third is too bloated, unsafe, privacy unfriendly and required too much permits, resources and client colaboration to being able to work or be implemented properly, part of what does a client - server approach to things.
+<br>
 <h2>How does that work?</h2>
-This protocol works a little different than the rest of the text-based internet protocols, it is design to, instead of working with the regular client-server structure, it works with a client-middleware-server structure in mind, the idea is keeping a client agnostic approach as much as possible, being the case than the protocol is a way to present wherever content from another service or services is trying to present to such client.<br>
+This protocol works a little different than the rest of the text-based internet protocols, it is design to, instead of working with the regular client-server structure, it works with a client-middleware-server structure in mind, the idea is keeping a client agnostic approach as much as possible and assuming most of the time other services are gonna be the channel from which a client will connect to your middleware and consume his content, in other words you are not gonna receive that many direct client connections with this although you absolutely could, the pirate-protocol is not designed against that use-case but is not his main use case, because flexibility is paramount.<br>
+<br>
+Being the case than the protocol is a way to present wherever content from another service or services to a client in a different service (as it can be presenting GOPHER/GEMINI to a client in IRC through IRC), you need to assume you know nothing about it (the client) or know too little about it (only he is gonna be consuming the content through IRC) to design specifically for it, therefore you need to keep it as flexible as possible. As such, you need to consider than you are gonna be implementing this protocol in the middleware to be served to the clients interacting with it, whereas that be direct interaction or most probably an indirect interaction it depends of your implementation, but the idea of this protocol is helping you with that.<br>
 <br>
 <h3>Approach</h3>
-For this reason this is a text-based backend-enforced protocol, because the idea is than this protocol is presented from a middleware which is who makes the consumption of the other services and in order to give some order the the data from that other services is that it present them as it does.<br>
+For this reason this is a text-based backend-enforced protocol, because the idea is than this protocol is presented from a middleware which is who makes the consumption of the other services possible to the clients of another different service, and in order to give some order the the data from that other services is that it present them as it does.<br>
 <br>
 <h4>Text-based</h4>
-Indeed, as its neccesary to keep a client agnostic approach, you are kinda forced to use the most universal thing than any client can, in a better or worst way process, and that is text, you cannot present directly images either, but they are ways to bypass that.<br>
-<br>
+Indeed, as its neccesary to keep a client agnostic approach, you are kinda forced to use the most universal thing than any client can, in the best way you can, and that is text because mostly every service than allows communication allows for this, but sadly, that cause than you cannot present images directly either, but they are ways to bypass that.<br>
+<br>--MARK--
 <h4>Back-End enforced</h4>
 As the approach ask to be client agnostic, and as we cannot use client-based code because of it, we are forced to do everything only from the backend, the middleware shall be the one presenting a file with the info as the protocol required, but for certain it doesn't required to be a simple reading and redirecting, it could very well modify the content of what its sending in order to dynamize the content in the same way than, for instance, PHP forums worked back in the day, presenting all the old posts than used to exist.<br>
 <br>
