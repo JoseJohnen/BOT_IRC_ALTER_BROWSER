@@ -93,4 +93,48 @@ To give an example of that consider this very project where you can find in this
 This is true only because, as the middleware is acting as a bot, you know the client will be an IRC client and your channel (your way to communicate with the client) will be an IRC server, therefore flexibility and client agnosticism takes precedent because the medium requires such flexibility, in this case, the flexibility requires the use of IRC to present the pirate-protocol content to the client, than in this context we know it will be an IRC client.<br>
 <br>
 <h2>Technicall specification document</h2>
+In Pirate-Protocol lines distinguish between only two types
+<ul>
+  <li>Informative lines<br>Which are those who brings information to the table</li><br>
+  <li>Interatible lines<br>Which are those who are supposed to be interacted with</li><br>
+</ul>
+<h3>Informatible lines</h3>
+This are lines than, or bring some information to the client as for example language and text type, or are the content itself presented to the user.<br>
+<br>
+For the second case this is consider self, evident, for the first case however the types defined are as presented in this example:
+<ul>
+  <li>## For comments</li>
+  <li>lang="es" (For the language, optional)</li> 
+  <li>1 text/pirate (To indicate than the document being received is a pirate one, it come as a text in pirate mode, it also includes the numcode of the result of the transaction, more on that later)</li>
+</ul>
+
+<h3>Interactible lines</h3>
+All Interactible lines shall begin with [#] being '#' being a number only used by that line for identification purposes, after a whitespace shall contain the definer of which type of interactable, the possible types are as follow:<br>
+<ul>
+  <li> "=>" (Links)</li>
+  <li> "<°>" (Buttons)</li>
+</ul>
+<br>
+So they shall see as follows:<br>
+<br>
+    
+    [#][<space>][TYPE-OF-INTERACTABLE][<space>][INTERACTABLE-RELEVANT-INFO]
+      
+<br>
+Which, taking as an example of links "=>" this is how an interactable line shall look like:<br>
+<br>
+      
+    [#] =>[<space>][URL][<whitespace>||<space><USER-FRIENDLY LINK NAME>]
+    
+<br>
+Where <space> is any non-zero number of spaces or tabs and square brackets indicate that the enclosed content is optional. Or in other words, as any of this cases:
+<br><br>
+   
+    [1] => pirate://example.org/
+    [2] => pirate://example.org/ || An example link
+    [3] => pirate://example.org/foo ||	Another example link at the same host
+    [4] => foo/bar/taz.txt || A relative link
+    [5] => gopher://example.org:70/1 || A gopher link
+
+<br><br>
 <b>Coming Soon...</b>
