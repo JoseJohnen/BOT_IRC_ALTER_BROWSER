@@ -93,7 +93,7 @@ To give an example of that consider this very project where you can find in this
 This is true only because, as the middleware is acting as a bot, you know the client will be an IRC client and your channel (your way to communicate with the client) will be an IRC server, therefore flexibility and client agnosticism takes precedent because the medium requires such flexibility, in this case, the flexibility requires the use of IRC to present the pirate-protocol content to the client, than in this context we know it will be an IRC client.<br>
 <br>
 <h2>Technicall specification document</h2>
-<h3>Definitions</h3>
+<h3>Definitions and Conventions</h3>
 As this protocol have Pirate in the name we are taking port and nautic references for denominations in, somewhat functional-equivalent ways, as such:<br>
 <br>
 <ul>
@@ -101,17 +101,20 @@ As this protocol have Pirate in the name we are taking port and nautic reference
   <li><b>Astrolabe:</b> An astrolabe is basically a link in web lingo, thats it, called like that because of the           instruments old sailors used to know his location using the stars.</li>
   <li><b>Ramp:</b> A ramp is basically the button than send some data to a Wharf, similar in appearance to the form interaction from html but technically totaly different, they are called like this because of the Ro-Ro Ramps than are used in some ships to allow vehicles enter and exit to facilitate the load/unload of cargo.</li>
 </ul>
-
+<br>
+There is no breakline or similar concept in this protocol designed inside it, it is expected however than the middleware serves one line at the time to help flexibility but exceptions can be done if the services that is used as a channel requires it, otherwise the time between servings or the max size of a line it's up to every middleware.<br>
+<br>
+That being said, if it were necessary, \n or any other linebreaker could work, provided the service used as the way of communication require as such.<br>
+<br>
 <h3>Elements</h3>
 In Pirate-Protocol elements distinguish between only two types
 <ul>
-  <li>Informative elements<br>Which are those who brings information to the table</li><br>
+  <li>Informative elements<br>Which are those who show information.</li><br>
   <li>Interatible elements<br>Which are those who are supposed to be interacted with</li><br>
 </ul>
 <h4>Informatible lines</h3>
-This are lines than, or bring some information to the client as for example language and text type, or are the content itself presented to the user.<br>
+This are lines than, or bring some information to the client as for example language and text type, or are the content itself presented to the user, the types of this are as they are presented here:.<br>
 <br>
-For the second case this is consider self, evident, for the first case however the types defined are as presented in this example:
 <ul>
   <li>## For comments</li>
   <li>lang="es" (For the language, optional)</li> 
@@ -205,5 +208,3 @@ Please notice than warehouse are optionally interactables, that does mean than a
     >|< Answer Received!
     
 <br>
-[#] => pirate://example.org/ 
-<°> ButtonName
