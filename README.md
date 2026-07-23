@@ -93,12 +93,22 @@ To give an example of that consider this very project where you can find in this
 This is true only because, as the middleware is acting as a bot, you know the client will be an IRC client and your channel (your way to communicate with the client) will be an IRC server, therefore flexibility and client agnosticism takes precedent because the medium requires such flexibility, in this case, the flexibility requires the use of IRC to present the pirate-protocol content to the client, than in this context we know it will be an IRC client.<br>
 <br>
 <h2>Technicall specification document</h2>
-In Pirate-Protocol lines distinguish between only two types
+<h3>Definitions</h3>
+As this protocol have Pirate in the name we are taking port and nautic references for denominations in, somewhat functional-equivalent ways, as such:<br>
+<br>
 <ul>
-  <li>Informative lines<br>Which are those who brings information to the table</li><br>
-  <li>Interatible lines<br>Which are those who are supposed to be interacted with</li><br>
+  <li><b>Wharf:</b> A Wharf is basically the full complete address than you are about to see or you are currently          seing, for instance: "pirate://example.org/foo/bar" It can also mean the file itself than have that               content. Its called like that because a wharf is the place where ships dock (as, you "docked" in there)           and load/unload cargo and/or passengers.</li>
+  <li><b>Astrolabe:</b> An astrolabe is basically a link in web lingo, thats it, called like that because of the           instruments old sailors used to know his location using the stars.</li>
+  <li><b>Ramp:</b> A ramp is basically the button than send some data to a Wharf, similar in appearance to the form interaction from html but technically totaly different, they are called like this because of the Ro-Ro Ramps than are used in some ships to allow vehicles enter and exit to facilitate the load/unload of cargo.</li>
 </ul>
-<h3>Informatible lines</h3>
+
+<h3>Elements</h3>
+In Pirate-Protocol elements distinguish between only two types
+<ul>
+  <li>Informative elements<br>Which are those who brings information to the table</li><br>
+  <li>Interatible elements<br>Which are those who are supposed to be interacted with</li><br>
+</ul>
+<h4>Informatible lines</h3>
 This are lines than, or bring some information to the client as for example language and text type, or are the content itself presented to the user.<br>
 <br>
 For the second case this is consider self, evident, for the first case however the types defined are as presented in this example:
@@ -108,11 +118,13 @@ For the second case this is consider self, evident, for the first case however t
   <li>1 text/pirate (To indicate than the document being received is a pirate one, it come as a text in pirate mode, it also includes the numcode of the result of the transaction, more on that later)</li>
 </ul>
 
-<h3>Interactible lines</h3>
+<h4>Interactible lines</h3>
+<h5>Common elements</h5>
 All Interactible lines shall begin with [#] being '#' being a number only used by that line for identification purposes, after a whitespace shall contain the definer of which type of interactable, the possible types are as follow:<br>
 <ul>
-  <li> "=>" (Links)</li>
-  <li> "<°>" (Buttons)</li>
+  <li> "=>" (Links, here called Astrolabe)</li>
+  <li> "<°>" (Buttons, here called "Ramps")</li>
+  <li> ">|<" Warehouse (Anwers given by a call, as a table or such could be)</li>
 </ul>
 <br>
 So they shall see as follows:<br>
@@ -124,17 +136,74 @@ So they shall see as follows:<br>
 Which, taking as an example of links "=>" this is how an interactable line shall look like:<br>
 <br>
       
-    [#] =>[<space>][URL][<whitespace>||<space><USER-FRIENDLY LINK NAME>]
+    [#] =>[<space>][URL][<space>||<space><USER-FRIENDLY LINK NAME>]
     
 <br>
-Where <space> is any non-zero number of spaces or tabs and square brackets indicate that the enclosed content is optional. Or in other words, as any of this cases:
+Where <space> is any non-zero number of spaces or tabs and square brackets indicate that the enclosed content is optional. Or in other words, when written on a file (i.e. the wharf) it shall see something like this cases:
+<br><br>
+   
+    [#] => pirate://example.org/
+    [#] => pirate://example.org/ || An example link
+    [#] => pirate://example.org/foo ||	Another example link at the same host
+    [#] => foo/bar/taz.txt || A relative link
+    [#] => gopher://example.org:70/1 || A gopher link
+
+<br><br>
+Which shall be rendered something like this:
 <br><br>
    
     [1] => pirate://example.org/
-    [2] => pirate://example.org/ || An example link
-    [3] => pirate://example.org/foo ||	Another example link at the same host
-    [4] => foo/bar/taz.txt || A relative link
-    [5] => gopher://example.org:70/1 || A gopher link
+    [2] => An example link
+    [3] => Another example link at the same host
+    [4] => A relative link
+    [5] => A gopher link
 
 <br><br>
-<b>Coming Soon...</b>
+The reason we are writting [#] instead of the number directly is because the middleware, when interpreting the wharf will be the one who will define how to order them and any other of the interactables that is to give more flexibility to the middleware allowing it for different approaches to interact with the wharf. That is the same reason we are using "||" as a separator too because that way is easier to code the middleware in most back-end languages than have any integrated tools to work with strings.<br>
+<br>
+<h5>Specifically about the buttons</h5>
+<br>
+Meanwhile the astrolabes works as intended with just a minimal interaction, (basically a signal than doesn't require any more data than reffer your intention of execute it) the Ramps (buttons) by the other hand do sometimes require extra data to properly work.<br>
+<br>
+For this reason we will first talk about how to properly write them in the wharf (file), then the format to send the data and the format to know how to wait for it in different context.<br>
+<br>
+As you may rememer the strucutre of presentation of any interactable is like this:<br>
+<br>
+    
+    [#][<space>][TYPE-OF-INTERACTABLE][<space>][INTERACTABLE-RELEVANT-INFO]
+      
+<br>
+Which for the ramps is "<°>" this is how an interactable line shall look like:<br>
+<br>
+
+    [#] <°> [<space>][ID_BUTTON]||[Text To Show the Button][<space>||<space><ID_ANSWER>]
+    
+<br>
+Let's analize it a little bit: first we have the Interactable ID "[#]" to be defined by the middleware, and the mandatory ramp sign "<°>" indicating which type of interactable is, after that comes the specific ID_BUTTON which is a unique ID specifically designed for that button in particular and, instead of being setted by the middleware as he preffer to talk with the client, it will connect the middleware with the server hosting the wharf, that is because it has his own ID separated from the interactables ones, next to it the text than shall render just next to the sign of the type and after that, separated by a "||" but in an optional way, there is the ID_ANSWER which will tell the middleware where shall present the answer to that request in the wharf, if it must of course, they however rendered, and taking by example the last line, shall be seen something like this:<br>
+<br>
+
+    [3] <°> Text To Show the Button
+    
+<br>
+How it is used then?<br>
+The client shall send something like this through wherever service or way it shall to the middleware.<br>
+<br>
+
+    <°> ButtonName || Some data to send, this can use all the remaining space
+    
+<br>
+If there is an answer to be waited at, this shall be placed in a warehouse somewhere like this:<br>
+<br>
+
+    [#] >|< [<space>][ID_ANSWER][<space>||<space><Content Of The Answer>]
+    
+<br>
+Please notice than warehouse are optionally interactables, that does mean than a warehouse can be used to only show data instead, as such, this both examples are valid being the first interactable and the second not, and both represent the before thing well enough:<br>
+<br>
+
+    [4] >|< Answer Received!
+    >|< Answer Received!
+    
+<br>
+[#] => pirate://example.org/ 
+<°> ButtonName
