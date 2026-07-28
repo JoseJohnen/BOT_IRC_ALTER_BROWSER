@@ -208,3 +208,93 @@ Please notice than warehouse are optionally interactables, that does mean than a
     >|< Answer Received!
     
 <br>
+<h3>Codes</h3>
+<h4>How the codes works</h4>
+The answer codes in the pirate-protocol are done in a composed way instead of the relatibly common pre-establish way other protocols use, the way to build a code answer in the pirate protocol is pretty simple. A complete list of the relevant codes will be presented after the explanation of how this codes work:
+
+The code for success is:
+
+    1
+
+Which is also equivalent to:
+
+    01 or 10
+
+The code for failure is:
+
+    2
+
+Which can also be written as:
+
+    02 or 20
+
+From them on you can build your answers, for instance if you want to give successful create you add the number of the action next to the result of the action, as such:
+
+    11
+
+And if the creation failed, knowing than 1 is creation, you will write:
+
+    21
+
+Simple, right? the first number define the result in general terms, the second define the specific action related to that result, there is a little more tho.
+
+Lets supposed you have a failure but from the server side, something like the fact than that service is not implemented, in that case you dont have a failure of the action, but a server error, therefore you write it as such:
+
+    201
+
+Which means than there was a fail (2) but not in the intended action (0) but in the server answer, as such, the answer is 201 in the example because its saying "There was an error but it wasnt about the action (because of the 0) but in the server, which reported than that method is not implemented".
+
+<h5>First Digit (General Result)</h5>
+<table>
+  <tr>
+    <th>Code</th>
+    <th>Meaning</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Success</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Failure</td>
+  </tr>
+</table>
+
+<h5>Second Digit (Action)</h5>
+<table>
+  <tr>
+    <th>Code</th>
+    <th>Meaning</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Created</td>
+    <td>The request succeeded, and a new resource was created as a result.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Accepted</td>
+    <td>The request has been received but not yet acted upon. It is noncommittal, since there is no way in the pirate-protocol to later send an asynchronous response indicating the outcome of the request. It is intended for cases where another process or a different server than the one passed through the middleware handles the request, or for batch processing.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Non-Authoritative Information</td>
+    <td>This response code means the returned metadata is not exactly the same as is available from the origin server, but is collected from a local or a third-party copy. This is mostly used for mirrors or backups of another resource. Except for that specific case, the 1 Success response is preferred to this status.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>No Content</td>
+    <td>There is no content to send for this request.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Partial Content</td>
+    <td>This response code is used in response to a range request when the middleware has requested a part or parts of a resource.</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Multi-Status</td>
+    <td>Conveys information about multiple resources, for situations where multiple status codes might be appropriate.</td>
+  </tr>
+</table>
