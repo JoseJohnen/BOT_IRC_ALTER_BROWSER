@@ -45,14 +45,14 @@ Using the relevant part of the file as an example
 
 <h1>Pirate Protocol</h1>
 <h2>The main proposal and his objectives</h2>
-<p>The idea of this proposal is to define the pirate protocol a protocol that is simple, lightweight, flexible, easy to implement and consume, and privacy friendly as much as a protocol can be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the biggest variety of client applications possible than are tecnically able to do that being the case they were designed for that or not.</p>
+<p>The idea of this proposal is to define the pirate protocol a protocol that is simple, lightweight, flexible, easy to implement, consume, and privacy friendly, or at least as much privacy friendly as a protocol can be, the objective of this protocol is to be able to present content (in the laxest definition of the term) in the biggest variety of client applications possible than are tecnically able to run with it, being the case they were designed for that or not.</p>
 <br>
 <h2>What is the reason of this?</h2>
 The main idea of this and main benefit is that, by his own definition it will do several things:<br>
 <ul>
 <li>1) It will allow clients from different services to consume content through it from another services.</li><br>
 <li>2) It will allows clients from different services to coordinate connections to specific uses in other services through it, according to availability.</li><br>
-<li>3) Allows both ways of service use and content consumption; in other words it allows easy direct encapsulation and consumption of content through it to be used in another service, and/or make another service (A) being able to be used or his content consumed in another service (B)</li><br>
+<li>3) Allows both ways of service use and content consumption; in other words it allows easy direct encapsulation and consumption of content through it to be used in another service, and/or make another service (A) being able to be used or his content consumed by users in another service (B)</li><br>
 </ul>
 <h2>Why not using GOPHER, GEMINI or HTTP(S) for this?</h2>
 Because the first is not that easy to implement in other services in a safe way that do not impact the other service, and both, the first and the second are mostly for presenting data mostly if not completely, they are both lacking in any significant or flexible enough way to allow for easy user interaction, meanwhile the third is too bloated, unsafe, privacy unfriendly and required too much permits, resources and client colaboration to being able to work or be implemented properly, part of what does a client - server approach to things.
