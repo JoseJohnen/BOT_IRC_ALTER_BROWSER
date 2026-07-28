@@ -1,6 +1,6 @@
 <h1>BOT IRC ALTER BROWSER</h1>
 
-An IRC bot created for allowing the browsing of Gopherspace and Geminispace from IRC as a proof of concept for the idea of "middleware browser".
+An IRC bot created for allowing the browsing of Gopherspace and Geminispace from IRC as a proof of concept for the idea of "middleware browser", which works providing content through the idea of "client agnosticism" which dictates than the middleware should be the one serving the content of the server(s) to a client or clients which characteristics we know nothing about or we have minimal information about it, and than can vary widely between themselfs.
 
 <h2>Available Commands:</h2>
 
