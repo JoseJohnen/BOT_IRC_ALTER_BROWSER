@@ -268,6 +268,11 @@ Which means than there was a fail (2) but not in the intended action (0) but in 
     <th>Description</th>
   </tr>
   <tr>
+    <td>0</td>
+    <td>Not Related to Action</td>
+    <td>The answer is not directly related to the action attempted or performed.</td>
+  </tr>
+  <tr>
     <td>1</td>
     <td>Created</td>
     <td>The request succeeded, and a new resource was created as a result.</td>
