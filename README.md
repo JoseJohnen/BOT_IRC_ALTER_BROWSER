@@ -298,3 +298,57 @@ Which means than there was a fail (2) but not in the intended action (0) but in 
     <td>Conveys information about multiple resources, for situations where multiple status codes might be appropriate.</td>
   </tr>
 </table>
+
+<h5>Third Digit (Server Error Responses)</h5>
+<table>
+  <tr>
+    <th>Code</th>
+    <th>Meaning</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Internal Server Error</td>
+    <td>The server has encountered a situation it does not know how to handle. This error is generic, indicating that the server cannot find a more appropriate status code to respond with.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Not Implemented</td>
+    <td>The request method is not supported by the server and cannot be handled.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Bad Gateway</td>
+    <td>This error response means that the server, while working as a gateway to get a response needed to handle the request, got an invalid response.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Service Unavailable</td>
+    <td>The server is not ready to handle the request. Common causes are a server that is down for maintenance or that is overloaded. Note that together with this response, a user-friendly page explaining the problem should be sent. This response should be used for temporary conditions.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Gateway Timeout</td>
+    <td>This error response is given when the server is acting as a gateway and cannot get a response in time.</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Variant Also Negotiates</td>
+    <td>The server has an internal configuration error: during content negotiation, the chosen variant is configured to engage in content negotiation itself, which results in circular references when creating responses.</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Insufficient Storage</td>
+    <td>The method could not be performed on the resource because the server is unable to store the representation needed to successfully complete the request.</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td>Loop Detected</td>
+    <td>The server detected an infinite loop while processing the request.</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>Network Authentication Required</td>
+    <td>Indicates that the client needs to authenticate to gain network access.</td>
+  </tr>
+</table>
