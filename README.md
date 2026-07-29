@@ -302,6 +302,13 @@ Which means than there was a fail (2) but not in the intended action (0) but in 
     <td>Multi-Status</td>
     <td>Conveys information about multiple resources, for situations where multiple status codes might be appropriate.</td>
   </tr>
+  <tr>
+    <td>7</td>
+    <td>Bad Request</td>
+    <td>This code indicates that the middleware receive from the server the answer than it would not process the request due to something the server considered to be a client error. The reason is typically due to malformed request syntax, invalid request message framing, or deceptive request routing.
+
+Clients that receive this response should expect that repeating the request without modification will fail with the same error.</td>
+</tr>
 </table>
 
 <h5>Third Digit (Server Error Responses)</h5>
