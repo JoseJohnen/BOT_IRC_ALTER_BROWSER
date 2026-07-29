@@ -307,7 +307,7 @@ Which means than there was a fail (2) but not in the intended action (0) but in 
     <td>Bad Request</td>
     <td>This code indicates that the middleware receive from the server the answer than it would not process the request due to something the server considered to be a client error. The reason is typically due to malformed request syntax, invalid request message framing, or deceptive request routing.
 
-Clients that receive this response should expect that repeating the request without modification will fail with the same error.</td>
+Clients that receive this response from the middleware should expect that repeating the request without modification will fail with the same error.</td>
 </tr>
 </table>
 
