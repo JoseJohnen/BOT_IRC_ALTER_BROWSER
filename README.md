@@ -325,8 +325,8 @@ Clients that receive this response from the middleware should expect that repeat
   </tr>
   <tr>
     <td>2</td>
-    <td>Not Implemented</td>
-    <td>The request method is not supported by the server and cannot be handled.</td>
+    <td>Not Implemented/Not Found</td>
+    <td>The request method is not supported by the server and cannot be handled or couldn't be found.</td>
   </tr>
   <tr>
     <td>3</td>
