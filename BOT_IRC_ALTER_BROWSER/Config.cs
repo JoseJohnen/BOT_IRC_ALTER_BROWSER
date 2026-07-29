@@ -34,6 +34,17 @@ public static class Config
                     Program._GopherServer = new Thread(() => Gopher.StartGopherServer());
                     Program._GopherServer.Start();
                 }
+                
+                if (configurationRoot[$"Pirate:StartHosting"].ToUpper() == "ALLOW")
+                {
+                    Pirate._pth = configurationRoot[$"Pirate:RootFolder"];
+                    Pirate._prt = configurationRoot["Pirate:Port"];
+                    Pirate._cert1 = configurationRoot["Pirate:Cert1"];
+                    Pirate._cert2 = configurationRoot["Pirate:Cert2"];
+                    
+                    Program._PirateServer = new Thread(() => Pirate.StartPirateServer());
+                    Program._PirateServer.Start();
+                }
 
                 return true;
             }

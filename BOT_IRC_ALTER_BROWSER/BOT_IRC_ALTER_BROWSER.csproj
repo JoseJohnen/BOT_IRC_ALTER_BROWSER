@@ -13,6 +13,9 @@
       <None Include="geminiRoot\**\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Include="pirateRoot\**\*">
+           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
       <None Include="cert.pem;key.pem">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>

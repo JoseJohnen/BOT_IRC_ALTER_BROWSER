@@ -172,6 +172,7 @@ public class Bot
         leer_datos = new StreamReader(conexion); // Lo necesario para leer los datos de la conexion 
         mandar_datos = new StreamWriter(conexion); // Lo necesario para mandar comandos al canal IRC
 
+        UriParser.Register(new GenericUriParser(GenericUriParserOptions.Default), "gopher", 70);
         this.host = host;
         this.nickname = nickname;
         this.canal = canal;
@@ -214,6 +215,7 @@ public class Bot
             { @"\[(.*)\]", FollowLinkSite },
             { "GEMINI>(.*)", FetchGeminiSite },
             { "GOPHER>(.*)", FetchGopherSite },
+            { "PIRATE>(.*)", FetchPirateSite },
         };
     }
 
@@ -609,6 +611,24 @@ public class Bot
             return "0";
         }
     }
+    
+    public string FetchPirateSite(string item, Match regex)
+    {
+        try
+        {
+            Thread thrd = new Thread(() => FetchPirateWharft(item, regex));
+            Cleaner();
+            thrGeminiExplorations.Add(thrd);
+            thrd.Start();
+            return "1";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return "0";
+        }
+    }
+
 
     public async Task<string> FetchGeminiGem(string item, Match regex)
     {
@@ -774,7 +794,15 @@ public class Bot
                     }
 
                     string firstCharacter = strArray[i].Substring(0, 2);
-                    if ((firstCharacter.Contains("0")
+                    if (firstCharacter.Contains("i"))
+                    {
+                        string lineContent = strArray[i].Substring(1);
+                        WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                            lineContent.Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim()));
+                        i++;
+                        continue;
+                    }
+                    else if ((firstCharacter.Contains("0")
                          || firstCharacter.Contains("4")
                          || firstCharacter.Contains("5")
                          || firstCharacter.Contains("6")
@@ -797,15 +825,26 @@ public class Bot
                             l_hiper.Add(strArray[i].TrimEnd());
                         }
 
+                        string buffer = string.Empty;
                         if (strArray[i].Contains('\t'))
                         {
+                            buffer = strArray[i].Split('\t', StringSplitOptions.TrimEntries)[0].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim();
+                            if (buffer.Substring(0, 1).Contains("0"))
+                            {
+                                buffer = buffer.Substring(1);
+                            }
                             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                                "[" + j + "] " + strArray[i].Split('\t', StringSplitOptions.TrimEntries)[0].TrimEnd()));
+                                "[" + j + "] " + buffer));
                         }
                         else
                         {
+                            buffer = strArray[i].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim();
+                            if (buffer.Substring(0, 1).Contains("0"))
+                            {
+                                buffer = buffer.Substring(1);
+                            }
                             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                                "[" + j + "] " + strArray[i].TrimEnd()));
+                                "[" + j + "] " + buffer));
                         }
 
                         i++;
@@ -813,8 +852,8 @@ public class Bot
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
                         continue;
                     }
-
-                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
+                    
+                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim()));
                     i++;
                 }
             } while (strArray.Length > (i + 1));
@@ -836,6 +875,111 @@ public class Bot
         catch (Exception e)
         {
             Console.WriteLine("FetchGopherHole: " + e.Message);
+            return string.Empty;
+        }
+    }
+    
+    public async Task<string> FetchPirateWharft(string item, Match regex)
+    {
+        try
+        {
+            string donde = this.dedonde;
+
+            if (donde != this.canal)
+            {
+                donde = this.usuarioCanal;
+            }
+
+            string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
+
+            DateTime lastExecution = DateTime.Now;
+            TimeSpan interval = new TimeSpan(0, 0, 0, 2, 50);
+            string abb = FetchPirateSiteAsync(item, regex).GetAwaiter().GetResult();
+            string[] strArray = abb.Split("\n");
+            int i = 0, j = 0;
+            string result = string.Empty;
+            string baseUrl = item;
+            if (baseUrl.Contains(">"))
+            {
+                baseUrl = item.Split(">", StringSplitOptions.TrimEntries)[1];
+            }
+
+            cDicListaUsuarios_HiperLinkActivo.AddOrUpdate(quien, new Par<string, DateTime>(baseUrl, DateTime.Now),
+                (key, value) => new Par<string, DateTime>(baseUrl, DateTime.Now));
+
+            cDicUsuarios_Historial.AddOrUpdate(
+                quien,
+                new ConcurrentStack<string>(new[] { baseUrl }),
+                (key, existingStack) =>
+                {
+                    existingStack.Push(baseUrl);
+                    return existingStack;
+                }
+            );
+
+            if (!cDicListaUsuarios_HiperVinculos.ContainsKey(quien))
+            {
+                cDicListaUsuarios_HiperVinculos.TryAdd(quien, new List<Trio<string, List<string>, DateTime>>());
+            }
+
+            Trio<string, List<string>, DateTime> trio = new();
+            List<string> l_hiper = new List<string>();
+            do
+            {
+                if (interval <= (DateTime.Now - lastExecution))
+                {
+                    lastExecution = DateTime.Now;
+                    if (strArray[i].Contains("=>"))
+                    {
+                        if (!strArray[i].Contains("pirate:"))
+                        {
+                            l_hiper.Add("=> " + baseUrl + strArray[i].Replace("=> ", "").TrimEnd());
+                        }
+                        else
+                        {
+                            l_hiper.Add(strArray[i].TrimEnd());
+                        }
+
+                        if (strArray[i].Contains('\t'))
+                        {
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " +
+                                strArray[i].Replace("\t\t", "\t").Split('\t', StringSplitOptions.TrimEntries)[1]
+                                    .TrimEnd()));
+                        }
+                        else
+                        {
+                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                "[" + j + "] " + strArray[i].TrimEnd()));
+                        }
+
+                        i++;
+                        j++;
+                        // Console.WriteLine("[" + i + "] " + strArray[i]);
+                        continue;
+                    }
+
+                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
+                    i++;
+                }
+            } while (strArray.Length > i);
+
+            trio = new Trio<string, List<string>, DateTime>(baseUrl, l_hiper, DateTime.Now);
+
+            List<Trio<string, List<string>, DateTime>> l_baseTrio = new();
+            List<Trio<string, List<string>, DateTime>> l_originalTrio = new();
+            cDicListaUsuarios_HiperVinculos.TryGetValue(quien, out l_baseTrio);
+            l_originalTrio = l_baseTrio;
+            l_baseTrio.Add(trio);
+            cDicListaUsuarios_HiperVinculos.TryUpdate(quien, l_baseTrio, l_originalTrio);
+
+            result = "Commands available: [B]ack ; [#] to use link ; You are Here: " + baseUrl;
+            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, result));
+            return string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("FetchPirateWharft: " + e.Message);
             return string.Empty;
         }
     }
@@ -930,6 +1074,52 @@ public class Bot
         using var reader = new StreamReader(networkStream, Encoding.UTF8);
         return await reader.ReadToEndAsync();
     }
+    
+    public static async Task<string> FetchPirateSiteAsync(string urlString, Match regex)
+    {
+        try
+        {
+            Uri uri = null;
+            if (urlString.Contains(">"))
+            {
+                uri = new Uri(urlString.Split(">", StringSplitOptions.TrimEntries)[1]);
+            }
+            else
+            {
+                uri = new Uri(urlString);
+            }
+
+            if (!uri.Scheme.Equals("pirate", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("URL must use the pirate:// scheme.");
+
+            // Pirate protocol defaults to port 1313
+            int port = uri.Port == -1 ? 1313 : uri.Port;
+
+            using TcpClient client = new TcpClient();
+            await client.ConnectAsync(uri.Host, port);
+
+            // Establish the TLS stream
+            using var sslStream = new SslStream(client.GetStream(), false,
+                (sender, certificate, chain, sslPolicyErrors) =>
+                    true); // Trust TOFU/Self-signed certs typical of Gemini
+
+            await sslStream.AuthenticateAsClientAsync(uri.Host);
+
+            // Gemini requests are structured exactly as: <URL><CR><LF>
+            byte[] requestBytes = Encoding.UTF8.GetBytes($"{uri}\r\n");
+            await sslStream.WriteAsync(requestBytes, 0, requestBytes.Length);
+            await sslStream.FlushAsync();
+
+            // Read the server response
+            using var reader = new StreamReader(sslStream, Encoding.UTF8);
+            return await reader.ReadToEndAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return string.Empty;
+        }
+    }
 
     public string FollowLinkSite(string item, Match regex)
     {
@@ -985,6 +1175,12 @@ public class Bot
                         thrGeminiExplorations.Add(thrd);
                         thrd.Start();
                     }
+                    else if (backUrl.Contains("pirate"))
+                    {
+                        Thread thrd = new Thread(() => FetchPirateSite(backUrl, regex));
+                        thrGeminiExplorations.Add(thrd);
+                        thrd.Start();
+                    }
                     else
                     {
                     }
@@ -1032,6 +1228,13 @@ public class Bot
             {
                 prepare = precise.Item2[linkNumero];
                 Thread thrd = new Thread(() => FetchGopherSite(prepare, regex));
+                thrGeminiExplorations.Add(thrd);
+                thrd.Start();
+            }
+            if (precise.Item1.Contains("pirate"))
+            {
+                prepare = precise.Item2[linkNumero].Replace("=> ", "").Split("\t", StringSplitOptions.TrimEntries)[0];
+                Thread thrd = new Thread(() => FetchPirateSite(prepare, regex));
                 thrGeminiExplorations.Add(thrd);
                 thrd.Start();
             }

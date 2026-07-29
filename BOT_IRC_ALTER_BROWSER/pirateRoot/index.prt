@@ -1,0 +1,7 @@
+# Hola Pirata
+
+=> /sub/other.prt otros con carpeta
+
+=> pirate://localhost/sub/other.prt otros pero absoluto con carpeta
+
+Servidor .NET funcionando.
