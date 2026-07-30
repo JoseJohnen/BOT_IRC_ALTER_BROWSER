@@ -8,6 +8,7 @@ class Program
     
     public static Thread _GeminiServer;
     public static Thread _GopherServer;
+    public static Thread _PirateServer;
 
     private static IConfiguration _configuration;
     
