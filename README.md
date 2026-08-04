@@ -189,7 +189,7 @@ Let's analize it a little bit: first we have the Interactable ID "[#]" to be def
     
 <br>
 How it is used then?<br>
-The client shall send something like this through wherever service or way it shall to the middleware.<br>
+The middleware or client shall send something like this through wherever service or way it shall to the server<br>
 <br>
 
     <°> ButtonName || Some data to send, this can use all the remaining space
