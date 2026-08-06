@@ -1,4 +1,4 @@
-<h1>BOT IRC ALTER BROWSER</h1>
+<h1>BOT IRC ALTER BROWSER (Alpha)</h1>
 
 An IRC bot created for allowing the browsing of Gopherspace and Geminispace from IRC as a proof of concept for the idea of "middleware browser", which works providing content through the idea of "client agnosticism" which dictates than the middleware should be the one serving the content of the server(s) to a client or clients which characteristics we know nothing about or we have minimal information about it, and than can vary widely between themselfs.
 
@@ -189,7 +189,7 @@ Let's analize it a little bit: first we have the Interactable ID "[#]" to be def
     
 <br>
 How it is used then?<br>
-The client shall send something like this through wherever service or way it shall to the middleware.<br>
+The middleware or client shall send something like this through wherever service or way it shall to the server<br>
 <br>
 
     <°> ButtonName || Some data to send, this can use all the remaining space
