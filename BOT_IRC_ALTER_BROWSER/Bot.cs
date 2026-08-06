@@ -18,7 +18,7 @@ public class Bot
     public string host = "irc.libera.chat"; // Establecemos la variable string host para tener el host del canal IRC
     public string nickname = "ClapTrakaLaKa"; // Establecemos la variable nickname con el nick del bot
     private string password = ""; // Establecemos la variable password con "" porque esta vacía de base
-    
+
     public string Password
     {
         get => password;
@@ -29,10 +29,11 @@ public class Bot
                 password = value;
                 return;
             }
+
             password = "";
         }
-
     }
+
     public string canal = "#locos"; // Establecemos la variable canal con el nombre del canal
 
     #endregion
@@ -212,7 +213,7 @@ public class Bot
         {
             { "!(.*)d(.*)", DadosDeRol },
             // { "GEMINI:(.*)", FollowLinkGeminiSite },
-            { @"\[(.*)\]", FollowLinkSite },
+            { @"\[(.*)\]", ActivateAction },
             { "GEMINI>(.*)", FetchGeminiSite },
             { "GOPHER>(.*)", FetchGopherSite },
             { "PIRATE>(.*)", FetchPirateSite },
@@ -231,11 +232,12 @@ public class Bot
         this.mandar_datos.Flush(); // ..
 
         if (!string.IsNullOrWhiteSpace(Password))
-        { 
-            this.mandar_datos.WriteLine("PRIVMSG NICKSERV :IDENTIFY " + this.Password ); // Usamos el comando IDENTIFY para logear la cuenta; 
+        {
+            this.mandar_datos.WriteLine("PRIVMSG NICKSERV :IDENTIFY " +
+                                        this.Password); // Usamos el comando IDENTIFY para logear la cuenta; 
             this.mandar_datos.Flush(); // ..
         }
-        
+
         this.mandar_datos.WriteLine("JOIN " + this.canal); // Usamos el comando JOIN para entrar al canal
         this.mandar_datos.Flush(); // ..
     }
@@ -611,7 +613,7 @@ public class Bot
             return "0";
         }
     }
-    
+
     public string FetchPirateSite(string item, Match regex)
     {
         try
@@ -798,20 +800,21 @@ public class Bot
                     {
                         string lineContent = strArray[i].Substring(1);
                         WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                            lineContent.Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim()));
+                            lineContent.Replace("\terror.host\t1", "").Replace("\tfalse\t0", "")
+                                .Replace("fake\t(NULL)\t0", "").Trim()));
                         i++;
                         continue;
                     }
                     else if ((firstCharacter.Contains("0")
-                         || firstCharacter.Contains("4")
-                         || firstCharacter.Contains("5")
-                         || firstCharacter.Contains("6")
-                         || firstCharacter.Contains("9"))
-                        && (!firstCharacter.Contains(".")
-                            && !firstCharacter.Contains("-")
-                            && !firstCharacter.Contains(")")
-                            && !firstCharacter.Contains("]"))
-                       )
+                              || firstCharacter.Contains("4")
+                              || firstCharacter.Contains("5")
+                              || firstCharacter.Contains("6")
+                              || firstCharacter.Contains("9"))
+                             && (!firstCharacter.Contains(".")
+                                 && !firstCharacter.Contains("-")
+                                 && !firstCharacter.Contains(")")
+                                 && !firstCharacter.Contains("]"))
+                            )
                     {
                         string getTypeFile = strArray[i].Substring(0, 1);
                         if (!strArray[i].Contains("gopher:"))
@@ -828,21 +831,26 @@ public class Bot
                         string buffer = string.Empty;
                         if (strArray[i].Contains('\t'))
                         {
-                            buffer = strArray[i].Split('\t', StringSplitOptions.TrimEntries)[0].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim();
+                            buffer = strArray[i].Split('\t', StringSplitOptions.TrimEntries)[0]
+                                .Replace("\terror.host\t1", "").Replace("\tfalse\t0", "").Replace("fake\t(NULL)\t0", "")
+                                .Trim();
                             if (buffer.Substring(0, 1).Contains("0"))
                             {
                                 buffer = buffer.Substring(1);
                             }
+
                             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
                                 "[" + j + "] " + buffer));
                         }
                         else
                         {
-                            buffer = strArray[i].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim();
+                            buffer = strArray[i].Replace("\terror.host\t1", "").Replace("\tfalse\t0", "")
+                                .Replace("fake\t(NULL)\t0", "").Trim();
                             if (buffer.Substring(0, 1).Contains("0"))
                             {
                                 buffer = buffer.Substring(1);
                             }
+
                             WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
                                 "[" + j + "] " + buffer));
                         }
@@ -852,8 +860,10 @@ public class Bot
                         // Console.WriteLine("[" + i + "] " + strArray[i]);
                         continue;
                     }
-                    
-                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].Replace("\terror.host\t1","").Replace("\tfalse\t0","").Replace("fake\t(NULL)\t0","").Trim()));
+
+                    WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                        strArray[i].Replace("\terror.host\t1", "").Replace("\tfalse\t0", "")
+                            .Replace("fake\t(NULL)\t0", "").Trim()));
                     i++;
                 }
             } while (strArray.Length > (i + 1));
@@ -878,7 +888,7 @@ public class Bot
             return string.Empty;
         }
     }
-    
+
     public async Task<string> FetchPirateWharft(string item, Match regex)
     {
         try
@@ -929,34 +939,99 @@ public class Bot
                 if (interval <= (DateTime.Now - lastExecution))
                 {
                     lastExecution = DateTime.Now;
-                    if (strArray[i].Contains("=>"))
+                    if (strArray[i].Contains("[#]"))
                     {
-                        if (!strArray[i].Contains("pirate:"))
+                        if (strArray[i].Contains("=>"))
                         {
-                            l_hiper.Add("=> " + baseUrl + strArray[i].Replace("=> ", "").TrimEnd());
+                            if (!strArray[i].Contains("pirate:"))
+                            {
+                                l_hiper.Add("=> " + baseUrl + strArray[i].Replace("=> ", "").TrimEnd());
+                            }
+                            else
+                            {
+                                l_hiper.Add(strArray[i].TrimEnd());
+                            }
+
+                            if (strArray[i].Contains('\t'))
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                    "[" + j + "] " +
+                                    strArray[i].Replace("[#]", "").Replace("\t\t", "\t")
+                                        .Split('\t', StringSplitOptions.TrimEntries)[1]
+                                        .TrimEnd()));
+                            }
+                            else
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                    "[" + j + "] " + strArray[i].Replace("[#]", "").TrimEnd()));
+                            }
+
+                            i++;
+                            j++;
+                            // Console.WriteLine("[" + i + "] " + strArray[i]);
+                            continue;
                         }
-                        else
+                        else if (strArray[i].Contains("<°>"))
                         {
-                            l_hiper.Add(strArray[i].TrimEnd());
+                            // [#] <°> ID_BUTTON || Button Text || ID_ANSWER
+                            //TODO: Extrae los botones, arregla la presentación de los mismos y además en el l_hiper deja todo listo para el funcionamiento
+                            string[] strArrayTemp = strArray[i].Replace("[#]", "").Split("||", StringSplitOptions.TrimEntries);
+
+                            string[] temp = strArrayTemp[0].Split(" ", StringSplitOptions.TrimEntries);
+                            string idButton = temp[1];
+                            string idAnswer = string.Empty;
+                            if (strArrayTemp.Length == 1)
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + temp[0].Trim()));
+                            }
+                            else if (strArrayTemp.Length == 2)
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + temp[0].Trim() + " " + strArrayTemp[1].Trim()));
+                            }
+                            else if (strArrayTemp.Length > 2)
+                            {
+                                idAnswer = strArrayTemp[2];
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, "[" + j + "] " + temp[0].Trim() + " " + strArrayTemp[1].Trim()));
+                            }
+                            l_hiper.Add("<°> " + temp[1].TrimEnd());
+                            
+                            i++;
+                            j++;
+                            // Console.WriteLine("[" + i + "] " + strArray[i]);
+                            continue;
+                        }
+                        else if (strArray[i].Contains(">|<"))
+                        {
+                            if (!strArray[i].Contains("pirate:"))
+                            {
+                                l_hiper.Add("=> " + baseUrl + strArray[i].Replace("=> ", "").TrimEnd());
+                            }
+                            else
+                            {
+                                l_hiper.Add(strArray[i].TrimEnd());
+                            }
+
+                            if (strArray[i].Contains('\t'))
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                    "[" + j + "] " +
+                                    strArray[i].Replace("\t\t", "\t").Split('\t', StringSplitOptions.TrimEntries)[1]
+                                        .TrimEnd()));
+                            }
+                            else
+                            {
+                                WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
+                                    "[" + j + "] " + strArray[i].TrimEnd()));
+                            }
+
+                            i++;
+                            j++;
+                            // Console.WriteLine("[" + i + "] " + strArray[i]);
+                            continue;
                         }
 
-                        if (strArray[i].Contains('\t'))
-                        {
-                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                                "[" + j + "] " +
-                                strArray[i].Replace("\t\t", "\t").Split('\t', StringSplitOptions.TrimEntries)[1]
-                                    .TrimEnd()));
-                        }
-                        else
-                        {
-                            WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde,
-                                "[" + j + "] " + strArray[i].TrimEnd()));
-                        }
-
-                        i++;
-                        j++;
-                        // Console.WriteLine("[" + i + "] " + strArray[i]);
-                        continue;
+                        //
+                        //     >|< ID_ANSWER || 
                     }
 
                     WriterSender.TryWrite(new Trio<Bot, string, string>(this, donde, strArray[i].TrimEnd()));
@@ -1074,7 +1149,7 @@ public class Bot
         using var reader = new StreamReader(networkStream, Encoding.UTF8);
         return await reader.ReadToEndAsync();
     }
-    
+
     public static async Task<string> FetchPirateSiteAsync(string urlString, Match regex)
     {
         try
@@ -1120,20 +1195,55 @@ public class Bot
             return string.Empty;
         }
     }
-
-    public string FollowLinkSite(string item, Match regex)
+    
+    public string ActivateAction(string item, Match regex)
     {
         try
         {
-            string str = item.Replace("[", "").Replace("]", "");
-            int linkNumero = 0;
-
             string donde = this.dedonde;
 
             if (donde != this.canal)
             {
                 donde = this.usuarioCanal;
             }
+            
+            bool isButton = false;
+            if (item.Contains("<°>"))
+            {
+                Pirate.WriterSender.TryWrite(item);
+                return item;
+            }
+            else if (item.Contains(">|<"))
+            {
+                isButton = true;
+                return item;
+            }
+            else
+            {
+                return FollowLinkSite(item, regex);
+            }
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return string.Empty;
+        }
+    }
+
+    public string FollowLinkSite(string item, Match regex)
+    {
+        try
+        {
+            string donde = this.dedonde;
+
+            if (donde != this.canal)
+            {
+                donde = this.usuarioCanal;
+            }
+            
+            string str = item.Replace("[", "").Replace("]", "").Trim();
+            int linkNumero = 0;
 
             string quien = !string.IsNullOrWhiteSpace(this.usuarioCanal) ? this.usuarioCanal : " ";
 
@@ -1152,6 +1262,7 @@ public class Bot
                             "There is no place before this one to go back to, try another option or command"));
                         return "1";
                     }
+
                     do
                     {
                         tryPop = cQHistory.TryPop(out backUrl);
@@ -1231,6 +1342,7 @@ public class Bot
                 thrGeminiExplorations.Add(thrd);
                 thrd.Start();
             }
+
             if (precise.Item1.Contains("pirate"))
             {
                 prepare = precise.Item2[linkNumero].Replace("=> ", "").Split("\t", StringSplitOptions.TrimEntries)[0];
